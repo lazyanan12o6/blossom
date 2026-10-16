@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Blossom</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Blossom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta id="theme-color" name="theme-color" content="#eeeeeb">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<style>
+@font-face{font-family:'Montserrat';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-weight:600;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Montserrat';font-weight:700;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Poppins';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/poppins-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Poppins';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/poppins-latin-500-normal.woff2) format('woff2')}
+/* Layout: one phone-width column on a warm grey ground; one colour means one thing (pink = period, yellow = ovulation) */
+:root{
+  --bg:#eeeeeb; --surface:#ffffff; --ink:#323232; --muted:#75746e; --ring:#adaca5; --track:#eeeeeb; --bud:#eeeeeb;
+  --brand:#f48292; --on-brand:#ffffff; --danger:#c9505b; --scrim:rgba(50,50,50,.35);
+  --f-ui:'Montserrat','PingFang TC','Noto Sans TC',system-ui,sans-serif;
+  --f-num:'Poppins','Montserrat',system-ui,sans-serif;
+}
+/* dark mode is provisional: same neutrals as Slow Growing until the dark palette is designed */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
+    --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
+  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+}
+/* the logo switch inside the app wins over the system setting */
+:root[data-app="light"]{
+  --bg:#eeeeeb; --surface:#ffffff; --ink:#323232; --muted:#75746e; --ring:#adaca5; --track:#eeeeeb; --bud:#eeeeeb;
+  --danger:#c9505b; --scrim:rgba(50,50,50,.35); color-scheme:light;
+}
+:root[data-app="dark"]{
+  --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
+  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+}
+
+html,body{min-height:100%;margin:0}
+html{-webkit-text-size-adjust:100%}
+body{-webkit-touch-callout:none;padding-top:env(safe-area-inset-top,0px);-webkit-user-select:none;user-select:none;touch-action:manipulation}
+input,textarea{-webkit-user-select:text;user-select:text}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);transition:background-color .5s ease,color .5s ease;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+#app{max-width:430px;margin:0 auto;padding-inline:24px;box-sizing:border-box;overflow-x:hidden;min-height:100%}
+.screen{padding-block:28px 56px;display:flex;flex-direction:column;gap:26px}
+.screen.tight{gap:16px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:6px;min-width:0}
+.logo{width:48px;height:48px;margin-left:-4px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.logo svg{width:36px;height:36px;overflow:visible}
+h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.iconbtn{width:48px;height:48px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;color:var(--ring)}
+.top .iconbtn{margin-right:-14px}
+
+/* tabs */
+.tabs{display:flex;justify-content:center;gap:8px}
+.tab{width:88px;height:40px;border:none;border-radius:999px;font-size:11px;font-weight:500;letter-spacing:.06em;background:var(--surface);color:var(--ink);transition:background-color .35s ease,color .35s ease}
+.tab[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+
+/* bloom: press shrinks, release opens a little past full size, like a flower opening */
+.bl{transition:transform .12s ease}
+.bl.bl-down{transform:scale(var(--bl-d,.92))}
+.bl.bl-up{animation:blUp .4s cubic-bezier(.3,1.5,.5,1)}
+.bl.soft{--bl-d:.97;--bl-u:1.02}
+@keyframes blUp{0%{transform:scale(var(--bl-d,.92))}55%{transform:scale(var(--bl-u,1.05))}100%{transform:scale(1)}}
+.bloom-once{animation:bloomOnce .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes bloomOnce{0%{transform:scale(.9)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+/* main: flower, phase card, glow */
+.stage{position:relative;height:353px;margin-top:7px}
+.pcard{position:absolute;left:0;right:0;top:153px;height:200px;border-radius:25px;overflow:hidden;transition:background-color .6s ease}
+.glow{position:absolute;left:50%;top:6px;width:290px;height:257px;margin-left:-145px;pointer-events:none}
+.flower{position:absolute;left:50%;top:0;width:202px;height:203px;margin-left:-101px;border:none;padding:0;background:transparent;color:var(--ink)}
+.flower svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.flower svg path{fill:var(--surface);transition:fill .5s ease}
+.f-txt{position:absolute;left:0;right:0;text-align:center;line-height:1;white-space:nowrap;letter-spacing:.1em}
+.f-phase{top:56px;font-size:20px;font-weight:600;transition:color .5s ease}
+.f-day{top:89px;font-size:24px;font-weight:600}
+.f-day b{font-size:30px;font-weight:600;margin:0 .22em}
+.f-sub{top:130px;font-size:11px;font-weight:400;line-height:18px}
+.f-date{top:131px;font-size:12px}
+.f-date b{font-size:16px;font-weight:400;margin-right:.05em}
+.f-empty{top:94px;font-size:12px;line-height:20px;color:var(--muted)}
+.month-en{position:absolute;left:0;right:0;top:64px;text-align:center;font-size:26px;font-weight:400;letter-spacing:.04em;color:#fff;line-height:1}
+
+/* week strip: the chosen day stays in the middle, slide to move a day at a time */
+.strip{position:absolute;left:0;right:0;top:105px;height:84px;touch-action:pan-y}
+.strip-track{position:absolute;inset:0;will-change:transform}
+.sday{position:absolute;top:0;width:42px;height:84px;margin-left:-21px;border:none;background:transparent;padding:0;color:#fff;transition:opacity .25s ease}
+.sday .wd{position:absolute;left:0;right:0;top:6px;font-size:9px;font-weight:500;letter-spacing:.1em;line-height:1;text-align:center}
+.sday .dot-c{position:absolute;left:1px;top:21.6px;width:40px;height:40px;border-radius:50%;box-sizing:border-box;transform:scale(.7);transition:transform .35s cubic-bezier(.3,1.4,.5,1),background-color .4s ease,box-shadow .3s ease}
+.sday.sel .dot-c{transform:scale(1)}
+.sday .num{position:absolute;left:0;right:0;top:41.6px;margin-top:-7px;height:14px;line-height:14px;font-size:11px;font-weight:500;letter-spacing:.04em;text-align:center;transition:font-size .3s ease,color .3s ease}
+.sday.sel .num{font-size:13px}
+.sday .mk{position:absolute;left:50%;top:61px;width:4.9px;height:4.9px;margin-left:-2.45px;border-radius:50%;background:#fff;transition:top .3s ease}
+.sday.sel .mk{top:66px}
+
+/* quick record cards: a card splits into its options */
+.qrow{display:flex;justify-content:center;gap:14px;margin-top:-2px}
+.qcard{position:relative;width:90px;height:115px;flex-shrink:0}
+.qbase{position:absolute;inset:0;border:none;padding:0;border-radius:45px;background:var(--surface);color:var(--ink);transition:background-color .25s ease .05s}
+.qcard.open .qbase{background-color:transparent;transition-delay:0s}
+.qin{position:absolute;inset:0;transition:opacity .15s ease}
+.qcard.open .qin{opacity:0}
+.q-title{position:absolute;left:0;right:0;top:23px;font-size:12px;font-weight:500;letter-spacing:.1em;line-height:14px;text-align:center}
+.q-flower{position:absolute;left:50%;top:46px;width:27.4px;height:27.6px;margin-left:-13.7px}
+.q-flower svg{width:100%;height:100%;display:block;overflow:visible}
+.q-flower path{transition:fill .35s ease}
+.q-val{position:absolute;left:0;right:0;top:87px;font-size:9px;letter-spacing:.1em;line-height:12px;text-align:center;color:var(--ink)}
+.q-plus{position:absolute;left:50%;top:86.5px;margin-left:-6px;color:var(--ring)}
+.qopt{position:absolute;left:0;width:90px;border:none;padding:0;background:var(--surface);color:var(--ink);font-size:12px;font-weight:500;letter-spacing:.1em;
+  transition:top .34s cubic-bezier(.3,1.25,.5,1),height .34s cubic-bezier(.3,1.25,.5,1),border-radius .34s ease,background-color .25s ease,color .25s ease,opacity .2s ease}
+.qopt span{display:block;transition:opacity .18s ease}
+.qopt.shut span{opacity:0}
+.flower-open{animation:flowerOpen .6s cubic-bezier(.3,1.5,.5,1)}
+@keyframes flowerOpen{0%{transform:scale(.35) rotate(-40deg)}60%{transform:scale(1.18) rotate(6deg)}100%{transform:none}}
+
+/* the line about what comes next */
+.info{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:15px;min-height:24px;font-size:11px;font-weight:500;letter-spacing:.1em}
+.info svg{width:23px;height:23px;flex-shrink:0;overflow:visible}
+
+/* record page: the phase card grows a white sheet */
+.sheet{position:absolute;left:0;right:0;top:216.5px;background:var(--surface);border-radius:0 0 22px 22px;padding:3px 0 4px;transition:background-color .5s ease}
+.okbtn{display:block;margin:46px auto 0;width:100px;height:40px;border:none;border-radius:20px;background:var(--brand);color:#fff;font-size:14px;font-weight:500;letter-spacing:.06em}
+.prd{margin:12px 0 -32px;text-align:center;font-size:11px;letter-spacing:.1em;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+.linkbtn{border:none;background:transparent;padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--brand)}
+.linkbtn.danger{color:var(--danger)}
+
+.rec-in .stage{animation:stageUp .42s cubic-bezier(.22,.9,.3,1) both}
+@keyframes stageUp{from{transform:translateY(32px)}}
+.rec-in .sheet{animation:sheetDown .4s cubic-bezier(.22,.9,.3,1) .1s both}
+@keyframes sheetDown{from{clip-path:inset(0 0 100% 0 round 0 0 22px 22px)}to{clip-path:inset(0 0 0 0 round 0 0 22px 22px)}}
+.rec-in .rrow,.rec-in .rsep{animation:rowIn .3s ease both;animation-delay:calc(.24s + var(--i,0) * .045s)}
+@keyframes rowIn{from{opacity:0;transform:translateY(-6px)}}
+.rec-in .okbtn{animation:okIn .4s cubic-bezier(.3,1.45,.5,1) .38s both}
+.rec-in .prd{animation:fadeIn .3s ease .4s both}
+@keyframes okIn{from{opacity:0;transform:translateY(12px) scale(.8)}}
+.rec-in .f-swap{animation:fadeIn .3s ease .12s both}
+.rec-out .stage{animation:stageDown .32s cubic-bezier(.4,0,.6,1) both}
+@keyframes stageDown{to{transform:translateY(32px)}}
+.rec-out .sheet{animation:sheetUp .26s cubic-bezier(.4,0,.8,.6) both}
+@keyframes sheetUp{from{clip-path:inset(0 0 0 0 round 0 0 22px 22px)}to{clip-path:inset(0 0 100% 0 round 0 0 22px 22px)}}
+.rec-out .okbtn,.rec-out .prd{transition:opacity .14s ease,transform .14s ease;opacity:0;transform:scale(.9)}
+.m-leave .tabs,.m-leave .qrow,.m-leave .info{transition:opacity .15s ease,transform .15s ease;opacity:0}
+.m-leave .qrow,.m-leave .info{transform:translateY(8px)}
+.m-leave .flower{animation:bloomOnce .3s cubic-bezier(.3,1.5,.5,1)}
+.from-rec .tabs,.from-rec .qrow,.from-rec .info,.from-rec .month-en,.from-rec .strip{animation:fadeIn .3s ease .05s both}
+.from-rec .stage{animation:stageIn .32s cubic-bezier(.22,.9,.3,1) both}
+@keyframes stageIn{from{transform:translateY(-32px)}}
+
+/* record rows (record page and the day card under the month calendar) */
+.rrow{position:relative;min-height:61px;box-sizing:border-box;padding:0 30px;display:flex;align-items:center;gap:0}
+.rsep{height:1.05px;margin:0 31px;background:var(--track)}
+.rlabel{width:86.6px;flex-shrink:0;border:none;background:transparent;padding:0;text-align:left;font-size:14px;font-weight:600;letter-spacing:.1em;height:61px;color:var(--ink)}
+.rval{flex:1;min-width:0;border:none;background:transparent;padding:0;height:61px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;color:var(--ink)}
+.rval:disabled{opacity:.45}
+.rtext{font-size:11px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ricon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--ring);margin-right:-3px}
+.ricon svg{overflow:visible}
+.pills{flex:1;display:flex;gap:6px;align-items:center}
+.rpill{height:32px;min-width:54px;padding:0 12px;border:none;border-radius:16px;background:var(--track);color:var(--ink);font-size:12px;font-weight:500;letter-spacing:.1em;
+  animation:petal .34s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(var(--i,0) * .045s);transition:background-color .25s ease,color .25s ease}
+.rpill.on{color:#fff}
+@keyframes petal{from{opacity:0;transform:translateX(18px) scale(.6)}}
+.rnote{width:100%;box-sizing:border-box;border:none;outline:none!important;resize:none;background:var(--track);border-radius:14px;padding:10px 12px;font-family:var(--f-ui);font-size:13px;letter-spacing:.06em;line-height:1.6;color:var(--ink)}
+.rrow.noteopen{flex-direction:column;align-items:stretch;padding-bottom:16px}
+.rrow.noteopen .rlabel{height:52px}
+
+/* month */
+.calcard{background:var(--surface);border-radius:22px;padding:12px 12.35px 0;transition:background-color .5s ease;touch-action:pan-y;overflow:hidden}
+.cal-head{display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 9px}
+.arrow{width:44px;height:44px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;color:var(--ring)}
+.titlebtn{border:none;background:transparent;color:inherit;font-family:inherit;padding:0 10px;min-height:36px;cursor:pointer}
+.cal-title{font-size:14px;font-weight:600;letter-spacing:.1em}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));justify-items:center}
+.cal-l{font-size:11px;letter-spacing:.1em;line-height:1;margin-top:10px;padding-left:.1em}
+.cal-days{margin-top:17px;padding-bottom:10px}
+.cday{position:relative;width:43px;height:55.3px;border:none;background:transparent;padding:0;color:var(--ink)}
+.cday .c{position:absolute;left:50%;top:0;width:36px;height:36px;margin-left:-18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;letter-spacing:.04em;transition:background-color .35s ease,color .35s ease}
+.cday .ring{position:absolute;inset:0;border-radius:50%;border:1.23px solid transparent;transition:border-color .25s ease}
+.cday.today .ring{border-color:var(--ring)}
+.cday.sel .ring{border-color:var(--ink)}
+.cday.filled .ring{inset:-3px}
+.cday .mk{position:absolute;left:50%;top:41.6px;width:4.94px;height:4.94px;margin-left:-2.47px;border-radius:50%;box-sizing:border-box}
+.cday.sel .c{animation:bloomOnce .4s cubic-bezier(.3,1.5,.5,1)}
+.daycard{background:var(--surface);border-radius:22px;padding:6px 0 4px;transition:background-color .5s ease}
+.day-title{text-align:center;font-size:14px;font-weight:600;letter-spacing:.1em;padding:20px 0 12px}
+.future{padding:8px 24px 30px;text-align:center;font-size:12px;letter-spacing:.1em;line-height:1.8;color:var(--muted)}
+
+/* year */
+.ysum{position:relative;height:131px;margin-top:15px}
+.ysum .circ{position:absolute;left:50%;top:0;width:130px;height:130px;margin-left:-10.3px;border-radius:50%;background:var(--surface);transition:background-color .5s ease}
+.ysum .yfl{position:absolute;left:50%;top:2.8px;width:126px;height:126.6px;margin-left:-119.7px}
+.ysum .yfl svg{width:100%;height:100%;display:block;overflow:visible}
+.ysum .yv{position:absolute;width:130px;text-align:center;line-height:1}
+.yv .n{font-size:24px;font-weight:600;letter-spacing:.1em}
+.yv .u{font-size:22px;font-weight:600;letter-spacing:.1em}
+.yv .l{display:block;margin-top:9px;font-size:11px;font-weight:500;letter-spacing:.1em}
+.ynav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin:4px 8px -4px}
+.ynum{font-size:20px;font-weight:600;letter-spacing:.06em;text-align:center}
+.ylist{display:flex;flex-direction:column;gap:16px}
+.ycard{background:var(--surface);border-radius:19.33px;min-height:90px;box-sizing:border-box;padding:22px 24px 21px 32px;display:flex;flex-direction:column;justify-content:center;gap:10px;transition:background-color .5s ease}
+.y1{display:flex;align-items:baseline;gap:10px;line-height:1;flex-wrap:wrap}
+.y1 .big{font-size:18px;font-weight:600;letter-spacing:.1em}
+.y1 .bigu{font-size:16px;font-weight:600;letter-spacing:.1em}
+.y1 .rng{font-size:12px;font-weight:600;letter-spacing:.1em}
+.y2{font-size:11px;font-weight:500;letter-spacing:.1em;line-height:1.5}
+.y2 .p{color:var(--brand)}
+.y2 .g,.y3{color:var(--ring)}
+.y3{font-size:11px;font-weight:500;letter-spacing:.1em;line-height:1.5;margin-top:-6px}
+
+/* settings */
+.setlist{display:flex;flex-direction:column;gap:16px}
+.setrow{width:100%;min-height:70px;box-sizing:border-box;padding:16px 20px 16px 19.5px;border:none;border-radius:18px;background:var(--surface);color:var(--ink);display:flex;align-items:center;justify-content:flex-start;gap:14.5px;text-align:left;transition:background-color .5s ease}
+.setrow.noicon{padding-left:21px}
+.set-title{font-size:14px;font-weight:600;letter-spacing:.1em}
+.set-sub{display:block;font-size:9px;font-weight:400;letter-spacing:.1em;margin-top:5px;font-variant-numeric:tabular-nums}
+.set-sub.warn{color:var(--danger)}
+.set-icon{display:flex;width:32px;height:32px;flex-shrink:0;align-items:center;justify-content:center}
+.set-icon svg{overflow:visible}
+.thanks{margin:24px 0 0;text-align:center;font-size:12px;letter-spacing:.1em;display:flex;align-items:center;justify-content:center;gap:8px}
+.thanks svg{width:14px;height:12px}
+.cyc-auto{justify-content:space-between;padding-left:27px;padding-right:24px}
+.chkc{width:26px;height:26px;border-radius:50%;box-sizing:border-box;border:1.3px solid var(--ring);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background-color .3s ease,border-color .3s ease}
+.chkc.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.cyc-sub{margin:-6px 0 0;text-align:center;font-size:11px;letter-spacing:.1em;line-height:1.7;color:var(--muted)}
+.sec-title{text-align:center;font-size:16px;font-weight:600;letter-spacing:.1em;margin-top:12px}
+.steprow{min-height:66px;box-sizing:border-box;padding:0 16.7px 0 27px;border-radius:16px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;transition:background-color .5s ease}
+.steprow .set-title{white-space:nowrap}
+.stepper{display:flex;align-items:center}
+.step{width:44px;height:44px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.step span.c{width:26px;height:26px;border-radius:50%;background:var(--track);display:flex;align-items:center;justify-content:center}
+.step:disabled{opacity:.35}
+.step-n{width:48px;text-align:center;font-family:var(--f-num);font-size:18px;letter-spacing:.06em;font-variant-numeric:tabular-nums;transition:opacity .3s ease}
+.dim{opacity:.4}
+.disclaim{margin:22px 12px 0;text-align:center;font-size:11px;letter-spacing:.1em;line-height:1.8;color:var(--muted)}
+
+/* misc */
+.empty{padding:40px 12px;text-align:center;font-size:13px;letter-spacing:.1em;line-height:1.9;color:var(--muted)}
+.overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:32px;z-index:10}
+.dialog{width:100%;max-width:340px;background:var(--surface);border-radius:24px;padding:28px 22px 20px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.dlg-title{font-size:16px;font-weight:600;letter-spacing:.1em}
+.dlg-text{font-size:13px;line-height:1.7;letter-spacing:.1em;color:var(--muted)}
+.dlg-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.pill{height:48px;border:none;border-radius:999px;font-size:14px;font-weight:600;letter-spacing:.1em;background:var(--track);color:var(--ink)}
+.pill.primary{background:var(--brand);color:var(--on-brand)}
+.pill.danger{background:var(--danger);color:#ffffff}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-size:13px;letter-spacing:.1em;z-index:20;white-space:nowrap}
+
+/* logo eyes */
+.eyes-look{animation:look 12s ease-in-out infinite}
+.eyes-blink{transform-box:fill-box;transform-origin:center;animation:blink 6s ease-in-out infinite}
+@keyframes look{0%,16%{transform:translate(0,0)}23%,37%{transform:translate(-2.6px,0)}44%,55%{transform:translate(0,0)}62%,73%{transform:translate(2.2px,-1px)}80%,100%{transform:translate(0,0)}}
+@keyframes blink{0%,40%,46%,100%{transform:scaleY(1)}43%{transform:scaleY(.12)}}
+
+/* page + slide motion */
+.in-r{animation:inR .55s cubic-bezier(.22,.9,.32,1)}
+.in-l{animation:inL .55s cubic-bezier(.22,.9,.32,1)}
+@keyframes inR{from{transform:translateX(44px);opacity:0}to{transform:none;opacity:1}}
+@keyframes inL{from{transform:translateX(-44px);opacity:0}to{transform:none;opacity:1}}
+.fade-in{animation:fadeIn .35s ease}
+.pop-in{animation:popIn .5s cubic-bezier(.3,1.35,.5,1)}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes popIn{from{transform:scale(.9);opacity:0}}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/htm.umd.js"></script>
+<script>
+(function () {
+const { useState, useEffect, useRef, useMemo } = React;
+const html = htm.bind(React.createElement);
+
+/* ---------- design constants ---------- */
+// one colour means one thing: the card shows today's phase
+const PH = {
+  men: { name: '生理期', color: '#f48292', glow: '#ffd2e4' },
+  fol: { name: '濾泡期', color: '#72b0ed', glow: '#ffd2e4' },
+  ovu: { name: '排卵期', color: '#fcb454', glow: '#ffed9f' },
+  lut: { name: '黃體期', color: '#b1c45f', glow: '#ffed9f' }
+};
+const PINK = '#f48292', YELLOW = '#fcb454';
+const OV_SOFT = '#fdcb87';   // predicted ovulation on the blue, green and pink cards
+const OV_DEEP = '#f99746';   // predicted ovulation on the yellow card
+const ITEMS = [
+  { k: 'flow', label: '月經量', color: PINK, opts: ['量少', '中等', '量多'] },
+  { k: 'spot', label: '其他出血', color: YELLOW, opts: ['量少', '量多'] },
+  { k: 'mucus', label: '分泌物', color: '#adaca5', opts: ['量少', '量多', '異常'] }
+];
+const DOW = ['日', '一', '二', '三', '四', '五', '六'];
+const MONTH_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const VIEWS = ['main', 'month', 'year'];
+const PERIOD_RANGE = [2, 10], CYCLE_RANGE = [18, 60];
+
+/* ---------- shapes from the design files ---------- */
+const P_LOGO = 'M31.92,18.31c-.37-.43-.37-1.07,0-1.49,1.77-2.01,2.13-4.91.65-7.3-1.5-2.44-4.44-3.62-7.26-3.17-.51.08-1.02-.21-1.21-.69-.97-2.47-3.52-4.24-6.52-4.26-3-.01-5.57,1.73-6.57,4.19-.19.48-.71.77-1.22.68-2.81-.48-5.77.68-7.29,3.1-1.5,2.38-1.18,5.28.57,7.31.37.43.37,1.07,0,1.49-1.77,2.01-2.13,4.91-.65,7.3,1.5,2.44,4.44,3.62,7.26,3.17.51-.08,1.02.21,1.21.69.97,2.47,3.52,4.24,6.52,4.26,3,.01,5.57-1.73,6.57-4.19.19-.48.71-.77,1.22-.68,2.81.48,5.77-.68,7.29-3.1,1.5-2.38,1.18-5.28-.57-7.31Z';
+const P_BIG = 'M278.53,298.53c-2.33-2.7-2.31-6.73.05-9.4,11.18-12.7,13.41-30.95,4.12-46.03-9.46-15.35-28.04-22.85-45.81-20-3.23.52-6.44-1.34-7.64-4.38-6.14-15.57-22.23-26.73-41.19-26.82-18.96-.09-35.17,10.92-41.49,26.43-1.23,3.02-4.46,4.85-7.68,4.3-17.74-3.02-36.41,4.3-46.03,19.56-9.46,14.99-7.42,33.26,3.61,46.06,2.33,2.7,2.31,6.73-.05,9.4-11.18,12.7-13.42,30.95-4.12,46.03,9.46,15.35,28.04,22.85,45.81,20,3.23-.52,6.44,1.34,7.64,4.38,6.14,15.57,22.23,26.73,41.19,26.82,18.96.09,35.17-10.92,41.49-26.44,1.23-3.02,4.46-4.85,7.68-4.3,17.74,3.02,36.41-4.3,46.03-19.56,9.46-14.99,7.42-33.26-3.61-46.06Z';
+const P_BUD = 'M29.87,16.92c1.52-1.73,1.82-4.21.56-6.26-1.28-2.09-3.81-3.11-6.22-2.72-.44.07-.87-.18-1.04-.6-.83-2.12-3.02-3.64-5.59-3.65-2.57-.01-4.78,1.48-5.63,3.6-.17.41-.61.66-1.04.59-2.41-.41-4.94.59-6.25,2.66-1.28,2.04-1.01,4.52.49,6.27.32.37.31.91,0,1.28-1.52,1.73-1.82,4.21-.56,6.26,1.28,2.09,3.81,3.11,6.22,2.72.44-.07.87.18,1.04.6.83,2.12,3.02,3.64,5.59,3.65,2.57.01,4.78-1.48,5.63-3.6.17-.41.61-.66,1.04-.59,2.41.41,4.94-.59,6.25-2.66,1.28-2.04,1.01-4.52-.49-6.26-.32-.37-.31-.91,0-1.28ZM17.5,22.22c-2.98,0-5.39-2.11-5.39-4.72s2.41-4.72,5.39-4.72,5.39,2.11,5.39,4.72-2.41,4.72-5.39,4.72Z';
+const P_YEAR = 'M187.58,269.85c-1.45-1.69-1.44-4.2.03-5.87,6.97-7.92,8.37-19.3,2.57-28.71-5.9-9.57-17.49-14.25-28.58-12.47-2.01.32-4.02-.84-4.76-2.73-3.83-9.71-13.87-16.67-25.69-16.73-11.82-.06-21.94,6.81-25.88,16.49-.77,1.89-2.78,3.03-4.79,2.68-11.07-1.88-22.71,2.68-28.71,12.2-5.9,9.35-4.63,20.75,2.25,28.73,1.45,1.69,1.44,4.2-.03,5.87-6.97,7.92-8.37,19.3-2.57,28.71,5.9,9.57,17.49,14.25,28.58,12.47,2.01-.32,4.02.84,4.76,2.73,3.83,9.71,13.87,16.67,25.69,16.73,11.83.06,21.94-6.81,25.88-16.49.77-1.89,2.78-3.03,4.79-2.68,11.07,1.88,22.71-2.68,28.71-12.2,5.9-9.35,4.63-20.75-2.25-28.73Z';
+const P_HEART = 'M165.07,488.63c-1.32-.02-2.67-.67-3.74-1.41-1.7-1.17-3.24-2.81-3.58-4.96-.3-1.9.67-3.73,2.34-4.57,1.48-.75,3.24-.22,4.23,1.1.1.13.3.12.39-.02.81-1.36,2.39-2.02,3.89-1.58,1.84.54,2.81,2.48,2.69,4.36-.11,1.68-.92,3.23-1.97,4.48-1.09,1.3-2.47,2.62-4.25,2.6Z';
+const LOGO = '<svg viewBox="0 0 35 35" aria-hidden="true"><path style="fill:var(--brand)" d="' + P_LOGO + '"/><g class="eyes-look"><g class="eyes-blink"><circle style="fill:var(--bg);transition:fill .5s ease" cx="15.64" cy="19.36" r="1.86"/><circle style="fill:var(--bg);transition:fill .5s ease" cx="23.12" cy="19.36" r="1.86"/></g></g></svg>';
+const svgIcon = (vb, w, h, inner) => '<svg width="' + w + '" height="' + h + '" viewBox="' + vb + '" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+const ICONS = {
+  plus: svgIcon('0 0 13 13', 13, 13, '<path d="M.33 6.5h12.34M6.5.33v12.34"/>'),
+  plusSm: svgIcon('0 0 9 9', 9, 9, '<path d="M.35 4.5h8.3M4.5.35v8.3"/>'),
+  minus: svgIcon('0 0 9 9', 9, 9, '<path d="M.35 4.5h8.3"/>'),
+  pencil: svgIcon('297 736.5 14.7 14.7', 14.7, 14.7, '<polygon stroke-width="1.05" points="301.52 750.11 297.79 750.41 298.09 746.68 307.56 737.22 310.99 740.65 301.52 750.11"/><line stroke-width="1.05" x1="305.84" y1="738.93" x2="309.27" y2="742.36"/>'),
+  left: svgIcon('0 0 8 14', 8, 14, '<path d="M6.9 1.2L1.1 7l5.8 5.8"/>'),
+  right: svgIcon('0 0 8 14', 8, 14, '<path d="M1.1 1.2L6.9 7l-5.8 5.8"/>'),
+  menu: svgIcon('331.4 58.7 19.5 16.6', 19.5, 16.6, '<path d="M332.08 59.39h18.21M332.08 66.98h18.21M332.08 74.67h18.21"/>'),
+  close: svgIcon('336.5 58.4 9.3 17.1', 9.3, 17.1, '<path d="M337.23 59.1l7.88 7.88-7.88 7.87"/>'),
+  tick: svgIcon('307 149.4 10.6 7.8', 10.6, 7.8, '<polyline points="307.61 153.52 310.65 156.57 316.95 150.06"/>'),
+  cloudOk: svgIcon('45.2 143.9 29.4 19.6', 29.4, 19.6, '<path d="M70.08,152.08c-.1-2.89-2.47-5.2-5.39-5.2-.78,0-1.52.17-2.2.47-1.24-1.66-3.2-2.74-5.43-2.74-3.74,0-6.78,3.03-6.78,6.78,0,.18.01.35.03.52-2.54.49-4.45,2.72-4.45,5.4,0,3.04,2.46,5.5,5.5,5.5h17c3.04,0,5.5-2.46,5.5-5.5,0-2.44-1.59-4.51-3.79-5.23Z"/><polyline points="55.95 155.74 58.5 158.3 63.78 152.84"/>'),
+  cloudUp: svgIcon('45.2 143.9 29.4 19.6', 29.4, 19.6, '<path d="M70.08,152.08c-.1-2.89-2.47-5.2-5.39-5.2-.78,0-1.52.17-2.2.47-1.24-1.66-3.2-2.74-5.43-2.74-3.74,0-6.78,3.03-6.78,6.78,0,.18.01.35.03.52-2.54.49-4.45,2.72-4.45,5.4,0,3.04,2.46,5.5,5.5,5.5h17c3.04,0,5.5-2.46,5.5-5.5,0-2.44-1.59-4.51-3.79-5.23Z"/><path d="M59.86 158.6v-6.6M56.6 155.1l3.26-3.26 3.26 3.26"/>'),
+  restore: svgIcon('49.7 229.7 20.4 22.2', 20.4, 22.2, '<path d="M52.69,235.49c1.75-2,4.31-3.26,7.18-3.26,5.27,0,9.53,4.27,9.53,9.53s-4.27,9.53-9.53,9.53-9.53-4.27-9.53-9.53"/><polyline points="57.82 235.84 52.69 235.49 53.05 230.36"/>'),
+  flowerLine: svgIcon('2.5 2.5 25 25', 25, 25, '<path d="M25.79,15.61c-.28-.32-.27-.8,0-1.12,1.32-1.51,1.59-3.67.49-5.46-1.12-1.82-3.32-2.71-5.43-2.37-.38.06-.76-.16-.9-.52-.73-1.85-2.63-3.17-4.88-3.18-2.25-.01-4.17,1.3-4.92,3.14-.15.36-.53.58-.91.51-2.1-.36-4.31.51-5.46,2.32-1.12,1.78-.88,3.95.43,5.47.28.32.27.8,0,1.12-1.32,1.51-1.59,3.67-.49,5.46,1.12,1.82,3.32,2.71,5.43,2.37.38-.06.76.16.91.52.73,1.85,2.63,3.17,4.88,3.18,2.25.01,4.17-1.3,4.92-3.14.15-.36.53-.58.91-.51,2.1.36,4.31-.51,5.46-2.32,1.12-1.78.88-3.95-.43-5.47Z"/><circle cx="13.61" cy="16.39" r="1.39" fill="currentColor" stroke="none"/><circle cx="19.2" cy="16.39" r="1.39" fill="currentColor" stroke="none"/>')
+};
+function Icon({ name }) {
+  return html`<span aria-hidden="true" style=${{ display: 'flex' }} dangerouslySetInnerHTML=${{ __html: ICONS[name] }}></span>`;
+}
+// small flower with a round hole; grey bud when nothing is recorded
+function Bud({ color, size, open }) {
+  return html`<span aria-hidden="true" className=${open ? 'flower-open' : ''} style=${{ display: 'flex', width: size + 'px', height: size + 'px' }}
+    dangerouslySetInnerHTML=${{ __html: '<svg viewBox="3.8 3.69 27.41 27.63" width="' + size + '" height="' + size + '" style="overflow:visible"><path fill="' + color + '" style="transition:fill .35s ease" d="' + P_BUD + '"/></svg>' }}></span>`;
+}
+// the "next flower" in the line under the cards: the logo shape in the next phase's colour
+function NextFlower({ color }) {
+  return html`<span aria-hidden="true" style=${{ display: 'flex' }} dangerouslySetInnerHTML=${{ __html:
+    '<svg viewBox="0 0 35 35"><path fill="' + color + '" d="' + P_LOGO + '"/><circle fill="#fff" cx="15.64" cy="19.36" r="1.7"/><circle fill="#fff" cx="23.12" cy="19.36" r="1.7"/></svg>' }}></span>`;
+}
+const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+const glowBg = c => 'radial-gradient(ellipse closest-side at 50% 50%,' + [[1, 0], [.98, 2], [.57, 37], [.26, 65], [.07, 85], [0, 95]].map(s => hexA(c, s[0]) + ' ' + s[1] + '%').join(',') + ')';
+
+/* ---------- dates (kept as 'YYYY-MM-DD' strings) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const p = String(s).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12); };
+const addD = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const diffD = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 864e5);   // b − a in days
+const md = s => +s.slice(5, 7) + '/' + +s.slice(8, 10);
+const mdZh = s => +s.slice(5, 7) + '月' + +s.slice(8, 10) + '日';
+const fmtDate = iso => { const d = new Date(iso); return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()); };
+const sortP = list => list.slice().sort((a, b) => a.s < b.s ? -1 : a.s > b.s ? 1 : 0);
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+
+/* ---------- cycle model ----------
+   Facts: periods [{ s, e }] and daily logs. Everything else (phases, predictions) is worked out here and never saved. */
+function buildModel(data, today) {
+  const periods = sortP(data.periods || []);
+  const plens = [], cycles = [];
+  periods.forEach((p, i) => {
+    if (p.e < today) plens.push(diffD(p.s, p.e) + 1);
+    const n = periods[i + 1];
+    if (n) { const c = diffD(p.s, n.s); if (c >= 10 && c <= 120) cycles.push(c); }
+  });
+  const st = data.settings || {};
+  const manual = st.mode === 'manual';
+  const recentC = cycles.slice(-6), recentP = plens.slice(-6);
+  const cycle = manual ? st.cycle : recentC.length ? Math.round(mean(recentC)) : 28;
+  const plen = manual ? st.period : recentP.length ? Math.round(mean(recentP)) : 5;
+  const last = periods[periods.length - 1] || null;
+  let n0 = null, late = 0, base = null;
+  if (last) {
+    n0 = addD(last.s, cycle);
+    late = today > n0 ? diffD(n0, today) : 0;
+    base = late ? addD(today, 1) : n0;
+    if (base <= last.e) base = addD(last.e, 1);
+  }
+  return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, late, base,
+    avgCycle: cycles.length ? mean(cycles) : null, avgPeriod: plens.length ? mean(plens) : null, cache: new Map() };
+}
+function dayInfo(m, d) {
+  if (!m.cache.has(d)) m.cache.set(d, calcDay(m, d));
+  return m.cache.get(d);
+}
+function calcDay(m, d) {
+  const P = m.periods;
+  if (!P.length || d < P[0].s) return null;
+  let i = P.length - 1;
+  while (i > 0 && P[i].s > d) i--;
+  const p = P[i], next = P[i + 1];
+  let cs, pe, N, Nov, pred = false;
+  if (next) { cs = p.s; pe = p.e; N = next.s; Nov = N; }
+  else if (d < m.base) { cs = p.s; pe = p.e; N = m.base; Nov = m.n0; }
+  else {
+    const k = Math.floor(diffD(m.base, d) / m.cycle);
+    cs = addD(m.base, k * m.cycle); pe = addD(cs, m.plen - 1); N = addD(cs, m.cycle); Nov = N; pred = true;
+  }
+  // ovulation ≈ 14 days before the next period; the window is the day before to the day after
+  const ov = addD(Nov, -14), o1 = addD(ov, -1), o2 = addD(ov, 1);
+  const afterPe = addD(pe, 1);
+  let phase, start, nextAt, nextPhase;
+  if (d <= pe) { phase = 'men'; start = cs; nextAt = afterPe; nextPhase = afterPe < o1 ? 'fol' : afterPe <= o2 ? 'ovu' : 'lut'; }
+  else if (d < o1) { phase = 'fol'; start = afterPe; nextAt = o1; nextPhase = 'ovu'; }
+  else if (d <= o2) { phase = 'ovu'; start = pe >= o1 ? afterPe : o1; nextAt = addD(o2, 1); nextPhase = 'lut'; }
+  else { phase = 'lut'; start = pe > o2 ? afterPe : addD(o2, 1); nextAt = N; nextPhase = 'men'; }
+  return { phase, day: diffD(start, d) + 1, cs, pe, N, ov, pred, nextAt, nextPhase,
+    per: phase === 'men' ? (!pred && d <= m.today ? 'act' : 'pred') : null,
+    ovu: phase === 'ovu', late: !next && !pred && m.late > 0 && d > m.n0, actual: !pred ? p : null };
+}
+// where other bleeding falls in its cycle: the clinic's early / mid / late cycle
+function bleedClass(d, ov) {
+  const k = diffD(ov, d);
+  if (Math.abs(k) <= 3) return 'mid';
+  return k < 0 ? 'early' : 'late';
+}
+const CLASS_ZH = { early: '經期後', mid: '排卵前後', late: '經期前' };
+function cycleRows(m, year) {
+  const P = m.periods, rows = [];
+  P.forEach((p, i) => {
+    if (+p.s.slice(0, 4) !== year || p.s > m.today) return;
+    const next = P[i + 1];
+    const end = next ? addD(next.s, -1) : m.today;
+    const ov = addD(next ? next.s : addD(p.s, m.cycle), -14);
+    const cls = { early: 0, mid: 0, late: 0 };
+    let spots = 0;
+    for (let d = p.s; d <= end; d = addD(d, 1)) {
+      const l = m.logs[d];
+      if (!l || !l.spot || (d >= p.s && d <= p.e)) continue;
+      spots++; cls[bleedClass(d, ov)]++;
+    }
+    const ongoing = !next && p.e >= m.today;
+    rows.push({ p, next, end, current: !next, cycleLen: next ? diffD(p.s, next.s) : null,
+      perLen: diffD(p.s, ongoing ? m.today : p.e) + 1, ongoing, cycleDay: diffD(p.s, m.today) + 1, spots, cls });
+  });
+  return rows.reverse();
+}
+
+/* ---------- store: everything lives on this phone ---------- */
+const DATA_KEY = 'blossom:data';
+const UI_KEY = 'blossom:ui';
+// semantic version: big rework . new feature . small fix
+const VERSION = { label: '1.0.0', date: '2026.10.16' };
+const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
+function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
+function cleanLog(l) {
+  const o = {};
+  ['flow', 'spot', 'mucus'].forEach(k => { if (l && l[k]) o[k] = l[k]; });
+  if (l && l.note && String(l.note).trim()) o.note = String(l.note);
+  return Object.keys(o).length ? o : null;
+}
+// recording a flow makes sure the day sits inside a period:
+// close after an earlier period (≤2 days) → stretch it; just before the next one → start it earlier; otherwise a new period with the usual length
+function withPeriodAt(periods, d, plen) {
+  const P = sortP(periods);
+  if (P.some(p => p.s <= d && d <= p.e)) return P;
+  let prev = null, nxt = null;
+  P.forEach(p => { if (p.e < d) prev = p; else if (p.s > d && !nxt) nxt = p; });
+  if (prev && diffD(prev.e, d) <= 2) return P.map(p => p === prev ? { s: p.s, e: d } : p);
+  if (nxt && diffD(d, nxt.s) <= 2) return P.map(p => p === nxt ? { s: d, e: p.e } : p);
+  let e = addD(d, plen - 1);
+  if (nxt && e >= nxt.s) e = addD(nxt.s, -1);
+  return sortP(P.concat([{ s: d, e }]));
+}
+function useStore(today) {
+  const [data, setData] = useState(() => {
+    try { const raw = localStorage.getItem(DATA_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) return Object.assign(seedData(), d); } } catch (e) {}
+    return seedData();
+  });
+  useEffect(() => { try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch (e) {} }, [data]);
+  useEffect(() => { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {} }, []);
+  const model = useMemo(() => buildModel(data, today), [data, today]);
+  const setLog = (d, fn) => setData(s => {
+    const logs = Object.assign({}, s.logs);
+    const l = cleanLog(fn(Object.assign({}, logs[d] || {})));
+    if (l) logs[d] = l; else delete logs[d];
+    return Object.assign({}, s, { logs });
+  });
+  return {
+    data, model,
+    setItem: (d, k, v) => {
+      setLog(d, l => { l[k] = v || null; return l; });
+      if (k === 'flow' && v) setData(s => Object.assign({}, s, { periods: withPeriodAt(s.periods, d, buildModel(s, today).plen) }));
+      if (k === 'flow' && !v) setData(s => Object.assign({}, s, { periods: s.periods.filter(p => {
+        if (!(p.s <= d && d <= p.e)) return true;
+        for (let x = p.s; x <= p.e; x = addD(x, 1)) if (s.logs[x] && s.logs[x].flow) return true;
+        return false;
+      }) }));
+    },
+    setNote: (d, text) => setLog(d, l => { l.note = text; return l; }),
+    endPeriodAt: d => setData(s => Object.assign({}, s, { periods: s.periods.map(p => p.s <= d && d <= p.e ? { s: p.s, e: d } : p) })),
+    deletePeriod: ps => setData(s => Object.assign({}, s, { periods: s.periods.filter(p => p.s !== ps) })),
+    setSettings: o => setData(s => Object.assign({}, s, { settings: Object.assign({}, s.settings, o) })),
+    setTheme: t => setData(s => Object.assign({}, s, { theme: t })),
+    markBackup: () => setData(s => Object.assign({}, s, { lastBackup: new Date().toISOString() })),
+    snapshot: () => ({ app: 'blossom', format: 1, exportedAt: new Date().toISOString(), periods: data.periods, logs: data.logs, settings: data.settings, theme: data.theme }),
+    restore: b => setData(s => ({ v: 1, theme: b.theme == null ? s.theme : b.theme, lastBackup: s.lastBackup, periods: sortP(b.periods || []), logs: b.logs || {}, settings: Object.assign({}, DEFAULT_SETTINGS, b.settings || {}) }))
+  };
+}
+const isDay = s => typeof s === 'string' && /^\d{4}-\d\d-\d\d$/.test(s);
+function parseBackup(text) {
+  const b = JSON.parse(text);
+  if (!b || b.app !== 'blossom' || !Array.isArray(b.periods)) throw new Error('not a backup');
+  if (!b.periods.every(p => p && isDay(p.s) && isDay(p.e) && p.s <= p.e)) throw new Error('bad periods');
+  if (b.logs && (typeof b.logs !== 'object' || !Object.keys(b.logs).every(isDay))) throw new Error('bad logs');
+  return b;
+}
+function useToday() {
+  const [today, setToday] = useState(() => ymd(new Date()));
+  useEffect(() => {
+    const tick = () => { const t = ymd(new Date()); setToday(prev => prev === t ? prev : t); };
+    const id = setInterval(tick, 60000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, []);
+  return today;
+}
+const uiGet = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; } };
+const uiSet = o => { try { localStorage.setItem(UI_KEY, JSON.stringify(Object.assign(uiGet(), o))); } catch (e) {} };
+
+/* ---------- bloom feedback for anything marked .bl ---------- */
+(function () {
+  let cur = null;
+  document.addEventListener('pointerdown', e => {
+    const el = e.target && e.target.closest && e.target.closest('.bl');
+    if (!el || el.disabled) return;
+    cur = { el, x: e.clientX, y: e.clientY };
+    el.classList.remove('bl-up'); el.classList.add('bl-down');
+  }, true);
+  document.addEventListener('pointermove', e => {
+    if (cur && (Math.abs(e.clientX - cur.x) > 9 || Math.abs(e.clientY - cur.y) > 9)) { cur.el.classList.remove('bl-down'); cur = null; }
+  }, true);
+  const up = () => {
+    if (!cur) return;
+    const el = cur.el; cur = null;
+    el.classList.remove('bl-down'); void el.offsetWidth; el.classList.add('bl-up');
+  };
+  document.addEventListener('pointerup', up, true);
+  document.addEventListener('pointercancel', () => { if (cur) { cur.el.classList.remove('bl-down'); cur = null; } }, true);
+  document.addEventListener('animationend', e => { if (e.animationName === 'blUp' && e.target.classList) e.target.classList.remove('bl-up'); }, true);
+})();
+
+/* ---------- header ---------- */
+function Header({ toggleTheme, right }) {
+  return html`<header className="top">
+    <div className="brand">
+      <button className="logo" aria-label="切換深色或淺色" onClick=${toggleTheme} dangerouslySetInnerHTML=${{ __html: LOGO }}></button>
+      <h1>Blossom</h1>
+    </div>
+    ${right}
+  </header>`;
+}
+
+/* ---------- main: week strip ---------- */
+const STEP = 42.5;
+function stripLook(info, cardPhase) {
+  if (!info) return null;
+  if (info.per === 'act') return { bg: '#ffffff', fg: '#323232' };
+  if (info.per === 'pred') return { bg: 'rgba(255,255,255,.3)', fg: '#ffffff' };
+  if (info.ovu) return { bg: cardPhase === 'ovu' ? OV_DEEP : OV_SOFT, fg: '#ffffff' };
+  return null;
+}
+function WeekStrip({ m, sel, setSel, today, cardPhase }) {
+  const [off, setOff] = useState(0);
+  const [anim, setAnim] = useState(false);
+  const g = useRef(null);
+  const tapBlock = useRef(0);
+  const settle = (startOff, dir) => {
+    setAnim(false); setOff(startOff);
+    if (dir) setSel(addD(sel, dir));
+    requestAnimationFrame(() => requestAnimationFrame(() => { setAnim(true); setOff(0); }));
+  };
+  const down = e => { g.current = { x0: e.clientX, y0: e.clientY, on: false, dx: 0 }; };
+  const move = e => {
+    const s = g.current; if (!s) return;
+    const dx = e.clientX - s.x0, dy = e.clientY - s.y0;
+    if (!s.on) {
+      if (Math.abs(dx) > 7 && Math.abs(dx) > Math.abs(dy)) { s.on = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {} }
+      else { if (Math.abs(dy) > 10) g.current = null; return; }
+    }
+    s.dx = dx; setAnim(false); setOff(dx);
+  };
+  const up = () => {
+    const s = g.current; g.current = null;
+    if (!s || !s.on) return;
+    tapBlock.current = Date.now();
+    let k = Math.round(-s.dx / STEP);
+    if (!k && Math.abs(s.dx) > 18) k = s.dx < 0 ? 1 : -1;
+    settle(s.dx + k * STEP, k);
+  };
+  const pick = d => {
+    if (Date.now() - tapBlock.current < 300) return;
+    const k = diffD(sel, d); if (!k) return;
+    settle(k * STEP, k);
+  };
+  const cells = [];
+  for (let i = -5; i <= 5; i++) {
+    const d = addD(sel, i);
+    const info = dayInfo(m, d);
+    const look = stripLook(info, cardPhase);
+    const isSel = i === 0, isT = d === today;
+    const ring = isSel ? (look ? null : 'inset 0 0 0 1.5px #ffffff') : isT ? (look ? '0 0 0 2px ' + PH[cardPhase].color + ', 0 0 0 3.3px #ffffff' : 'inset 0 0 0 1.4px #ffffff') : null;
+    const logged = !!m.logs[d];
+    const fade = Math.max(0, Math.min(1, (4 * STEP - Math.abs(i * STEP + off)) / STEP));
+    cells.push(html`<button key=${d} className=${'sday' + (isSel ? ' sel' : '')} tabIndex=${Math.abs(i) > 3 ? -1 : 0} style=${{ left: 'calc(50% + ' + (i * STEP) + 'px)', opacity: fade }}
+      aria-label=${mdZh(d) + (isT ? '，今天' : '') + (isSel ? '，選取中' : '')} aria-pressed=${isSel ? 'true' : 'false'} onClick=${() => pick(d)}>
+      <span className="wd">${DOW[parseYmd(d).getDay()]}</span>
+      <span className="dot-c" style=${{ background: look ? look.bg : 'transparent', boxShadow: ring || 'none' }}></span>
+      <span className="num" style=${{ color: look ? look.fg : '#ffffff' }}>${+d.slice(8)}</span>
+      ${logged && html`<span className="mk"></span>`}
+    </button>`);
+  }
+  return html`<div className="strip" onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${up}>
+    <div className="strip-track" style=${{ transform: 'translateX(' + off + 'px)', transition: anim ? 'transform .38s cubic-bezier(.25,1.15,.4,1)' : 'none' }}>${cells}</div>
+  </div>`;
+}
+
+/* ---------- main: quick record cards ---------- */
+const OPT_GEO = { 2: [[9.5, 44], [61.5, 44]], 3: [[5, 35], [40, 35], [75, 35]] };
+function QuickCard({ item, value, open, onOpen, onClose, onPick, disabled, bloomKey }) {
+  // stage: 'shut' (pills sit on the card) → 'open' (pills in place); pills only exist while opening, open or closing
+  const [mounted, setMounted] = useState(false);
+  const [spread, setSpread] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setSpread(true)));
+      return () => cancelAnimationFrame(r);
+    }
+    setSpread(false);
+    const t = setTimeout(() => setMounted(false), 380);
+    return () => clearTimeout(t);
+  }, [open]);
+  const geo = OPT_GEO[item.opts.length];
+  const n = item.opts.length;
+  return html`<div className=${'qcard' + (open ? ' open' : '')} data-k=${item.k}>
+    <button className="qbase bl" aria-label=${item.label + '：' + (value ? item.opts[value - 1] : '還沒記錄') + '，點一下記錄'} aria-expanded=${open ? 'true' : 'false'}
+      style=${{ opacity: disabled ? .45 : 1 }} onClick=${() => open ? onClose() : onOpen()}>
+      <span className="qin">
+        <span className="q-title">${item.label}</span>
+        <span key=${'f' + bloomKey} className="q-flower"><${Bud} color=${value ? item.color : 'var(--bud)'} size=${27.4} open=${bloomKey > 0 && !!value} /></span>
+        ${value ? html`<span className="q-val">${item.opts[value - 1]}</span>` : html`<span className="q-plus"><${Icon} name="plusSm" /></span>`}
+      </span>
+    </button>
+    ${mounted && item.opts.map((o, i) => {
+      const on = value === i + 1;
+      const st = spread
+        ? { top: geo[i][0] + 'px', height: geo[i][1] + 'px', borderRadius: geo[i][1] / 2 + 'px', transitionDelay: (i * 0.045) + 's' }
+        : { top: '0px', height: '115px', borderRadius: '45px', opacity: open ? (i === 0 ? 1 : 0) : 0, transitionDelay: ((n - 1 - i) * 0.035) + 's' };
+      return html`<button key=${o} className=${'qopt bl' + (spread ? '' : ' shut')} aria-pressed=${on ? 'true' : 'false'}
+        style=${Object.assign(st, { background: on && open ? item.color : 'var(--surface)', color: on && open ? '#fff' : 'var(--ink)', zIndex: n - i })}
+        onClick=${() => onPick(on ? null : i + 1)}><span>${o}</span></button>`;
+    })}
+  </div>`;
+}
+
+/* ---------- main page ---------- */
+function Home(p) {
+  const { store, today, view, setView, sel, setSel, openRecord, toggleTheme, openSettings, showToast, leaving, anim } = p;
+  const m = store.model;
+  const t = dayInfo(m, today);
+  const phase = t ? t.phase : 'men';
+  const color = PH[phase].color;
+  const future = sel > today;
+  const log = m.logs[sel] || {};
+  const [openK, setOpenK] = useState(null);
+  const [bloom, setBloom] = useState({});
+  const closeTimer = useRef(null);
+  useEffect(() => { setOpenK(null); }, [sel]);
+  useEffect(() => {
+    if (!openK) return;
+    const away = e => { if (!(e.target.closest && e.target.closest('.qcard[data-k="' + openK + '"]'))) setOpenK(null); };
+    document.addEventListener('pointerdown', away, true);
+    return () => document.removeEventListener('pointerdown', away, true);
+  }, [openK]);
+  const pick = (item, v) => {
+    store.setItem(sel, item.k, v);
+    if (v && item.k === 'mucus' && v === 3) showToast('記得在備註寫下哪裡不一樣哦');
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setOpenK(null);
+      if (v) setBloom(b => Object.assign({}, b, { [item.k]: (b[item.k] || 0) + 1 }));
+    }, v ? 170 : 60);
+  };
+  const tapFlower = () => {
+    if (future) { showToast('未來的日子還不能記錄哦'); return; }
+    openRecord(sel);
+  };
+
+  // the line about what comes next
+  let infoColor = PINK, infoText;
+  if (!t) infoText = '記下經期第一天，就能開始預測哦';
+  else if (t.late) infoText = html`經期比預計晚 ${m.late} 天`;
+  else if (t.phase === 'lut') infoText = html`下次經期預計 ${md(t.N)} 開始`;
+  else {
+    const k = diffD(today, t.nextAt);
+    infoColor = PH[t.nextPhase].color;
+    infoText = k <= 1 ? '預計明天進入' + PH[t.nextPhase].name : html`預計再 ${k} 天進入${PH[t.nextPhase].name}`;
+  }
+
+  return html`<div className=${'screen' + (leaving ? ' m-leave' : '') + (anim === 'from-rec' ? ' from-rec' : '')}>
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" onClick=${openSettings}><${Icon} name="menu" /></button>`} />
+    <nav className="tabs">
+      ${VIEWS.map((v, i) => html`<button key=${v} className="tab bl" aria-pressed=${view === v ? 'true' : 'false'} onClick=${() => setView(v)}>${['Main', 'Month', 'Year'][i]}</button>`)}
+    </nav>
+    <div className="stage">
+      <div className="pcard" style=${{ background: color }}>
+        <div key=${sel.slice(0, 7)} className="month-en fade-in">${MONTH_EN[+sel.slice(5, 7) - 1]}</div>
+        <${WeekStrip} m=${m} sel=${sel} setSel=${setSel} today=${today} cardPhase=${phase} />
+      </div>
+      <div className="glow" style=${{ background: glowBg(PH[phase].glow) }}></div>
+      <button className="flower bl soft" aria-label="打開記錄頁" onClick=${tapFlower}>
+        <svg viewBox="86.5 191.9 202 203" aria-hidden="true"><path d=${P_BIG} /></svg>
+        ${t ? html`
+          <span className="f-txt f-phase" style=${{ color }}>${PH[phase].name}</span>
+          <span className="f-txt f-day">第<b>${t.day}</b>天</span>
+          <span className="f-txt f-sub">${phase === 'men' ? '本次經期' : '上次經期'}<br />${md(t.cs)} 開始</span>`
+        : html`
+          <span className="f-txt f-phase" style=${{ color: PINK, top: '64px', fontSize: '18px' }}>還沒有紀錄</span>
+          <span className="f-txt f-empty">點月經量<br />記下經期第一天</span>`}
+      </button>
+    </div>
+    <div className="qrow">
+      ${ITEMS.map(it => html`<${QuickCard} key=${it.k} item=${it} value=${log[it.k] || 0} open=${openK === it.k} disabled=${future}
+        bloomKey=${bloom[it.k] || 0}
+        onOpen=${() => { if (future) { showToast('未來的日子還不能記錄哦'); return; } setOpenK(it.k); }}
+        onClose=${() => setOpenK(null)} onPick=${v => pick(it, v)} />`)}
+    </div>
+    <div className="info" role="status">
+      <${NextFlower} color=${infoColor} />
+      <span>${infoText}</span>
+    </div>
+  </div>`;
+}
+
+/* ---------- record rows: shared by the record page and the month day card ---------- */
+function RecordRows({ store, date, disabled, showToast }) {
+  const log = store.model.logs[date] || {};
+  const [edit, setEdit] = useState(null);
+  const [note, setNote] = useState(log.note || '');
+  const timer = useRef(null);
+  useEffect(() => { setEdit(null); setNote((store.model.logs[date] || {}).note || ''); }, [date]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const toggle = k => { if (disabled) return; setEdit(e => e === k ? null : k); };
+  const pick = (it, v) => {
+    store.setItem(date, it.k, v);
+    if (v && it.k === 'mucus' && v === 3) showToast('記得在備註寫下哪裡不一樣哦');
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setEdit(null), v ? 200 : 60);
+  };
+  // the note saves as you type; the box folds away a moment after it loses focus so a tap on OK still lands
+  const typeNote = v => { setNote(v); store.setNote(date, v.slice(0, 200)); };
+  const saveNote = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setEdit(null), 180); };
+  const rows = [];
+  ITEMS.forEach((it, i) => {
+    const v = log[it.k] || 0;
+    if (i) rows.push(html`<div key=${'s' + i} className="rsep" style=${{ '--i': i }}></div>`);
+    rows.push(html`<div key=${it.k} className="rrow" style=${{ '--i': i }}>
+      <button className="rlabel" onClick=${() => toggle(it.k)} disabled=${disabled}>${it.label}</button>
+      ${edit === it.k
+        ? html`<div className="pills">${it.opts.map((o, j) => html`<button key=${o} className=${'rpill bl' + (v === j + 1 ? ' on' : '')} style=${{ '--i': j, background: v === j + 1 ? it.color : undefined }}
+            aria-pressed=${v === j + 1 ? 'true' : 'false'} onClick=${() => pick(it, v === j + 1 ? null : j + 1)}>${o}</button>`)}</div>`
+        : html`<button className="rval" disabled=${disabled} aria-label=${it.label + '：' + (v ? it.opts[v - 1] : '還沒記錄')} onClick=${() => toggle(it.k)}>
+            <span className="rtext">${v ? it.opts[v - 1] : ''}</span>
+            <span className="ricon">${v ? html`<span key=${'b' + v} className="bloom-once" style=${{ display: 'flex' }}><${Bud} color=${it.color} size=${27.6} /></span>` : html`<${Icon} name="plus" />`}</span>
+          </button>`}
+    </div>`);
+  });
+  rows.push(html`<div key="s3" className="rsep" style=${{ '--i': 3 }}></div>`);
+  rows.push(edit === 'note'
+    ? html`<div key="note" className="rrow noteopen" style=${{ '--i': 3 }}>
+        <button className="rlabel" onClick=${saveNote}>備註</button>
+        <textarea className="rnote" rows="3" autoFocus value=${note} placeholder="今天的身體狀況..." maxLength=${200}
+          onChange=${e => typeNote(e.target.value)} onBlur=${saveNote}></textarea>
+      </div>`
+    : html`<div key="note" className="rrow" style=${{ '--i': 3 }}>
+        <button className="rlabel" onClick=${() => toggle('note')} disabled=${disabled}>備註</button>
+        <button className="rval" disabled=${disabled} aria-label=${'備註：' + (log.note || '還沒寫')} onClick=${() => toggle('note')}>
+          <span className="rtext">${log.note || ''}</span>
+          <span className="ricon"><${Icon} name="pencil" /></span>
+        </button>
+      </div>`);
+  return rows;
+}
+// the period this day belongs to, with buttons to end it here or remove it
+function PeriodTools({ store, date, askDeletePeriod }) {
+  const m = store.model;
+  const p = m.periods.find(x => x.s <= date && date <= x.e);
+  if (!p) return null;
+  return html`<div className="prd">
+    <span>這次經期 ${md(p.s)}–${md(p.e)}</span>
+    ${date !== p.e && html`<button className="linkbtn bl" onClick=${() => store.endPeriodAt(date)}>在這天結束</button>`}
+    ${date === p.s && html`<button className="linkbtn danger bl" onClick=${() => askDeletePeriod(p)}>刪除這次經期</button>`}
+  </div>`;
+}
+
+/* ---------- record page ---------- */
+function Record({ store, date, today, toggleTheme, onDone, leaving, showToast, askDeletePeriod }) {
+  const m = store.model;
+  const info = dayInfo(m, date);
+  const ref = dayInfo(m, today);
+  const phase = (ref || info) ? (ref || info).phase : 'men';
+  const fl = info ? info.phase : null;
+  return html`<div className=${'screen ' + (leaving ? 'rec-out' : 'rec-in')}>
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" disabled><${Icon} name="menu" /></button>`} />
+    <div style=${{ height: '8px' }}></div>
+    <div className="stage" style=${{ height: 'auto' }}>
+      <div className="pcard" style=${{ background: PH[phase].color }}></div>
+      <div className="sheet" style=${{ position: 'relative', top: 0, marginTop: '216.5px' }}>
+        <${RecordRows} store=${store} date=${date} showToast=${showToast} />
+      </div>
+      <div className="glow" style=${{ background: glowBg(PH[phase].glow) }}></div>
+      <div className="flower" role="img" aria-label=${mdZh(date)}>
+        <svg viewBox="86.5 191.9 202 203" aria-hidden="true"><path d=${P_BIG} /></svg>
+        ${info
+          ? html`<span className="f-txt f-phase" style=${{ color: PH[fl].color }}>${PH[fl].name}</span>
+                 <span className="f-txt f-day">第<b>${info.day}</b>天</span>`
+          : html`<span className="f-txt f-phase" style=${{ color: PINK }}>記錄這天</span>`}
+        <span className="f-txt f-date f-swap" style=${info ? null : { top: '100px' }}><b>${+date.slice(5, 7)}</b>月 <b>${+date.slice(8)}</b>日</span>
+      </div>
+    </div>
+    <div style=${{ marginTop: '-26px' }}>
+      <${PeriodTools} store=${store} date=${date} askDeletePeriod=${askDeletePeriod} />
+      <button className="okbtn bl" onClick=${onDone}>OK</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- month ---------- */
+function Month({ store, today, toggleTheme, openSettings, view, setView, mOff, shiftMonth, jumpMonth, mSel, setMSel, calAnim, showToast, askDeletePeriod }) {
+  const m = store.model;
+  const base = parseYmd(today.slice(0, 8) + '01'); base.setMonth(base.getMonth() + mOff);
+  const y = base.getFullYear(), mo = base.getMonth();
+  const dim = new Date(y, mo + 1, 0).getDate();
+  const lead = new Date(y, mo, 1).getDay();
+  const sw = useRef(null);
+  const swDown = e => { sw.current = { x: e.clientX, y: e.clientY }; };
+  const swUp = e => {
+    const s = sw.current; sw.current = null; if (!s) return;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) shiftMonth(dx > 0 ? -1 : 1);
+  };
+  const days = [];
+  for (let i = 0; i < lead; i++) days.push(html`<div key=${'b' + i}></div>`);
+  for (let dd = 1; dd <= dim; dd++) {
+    const d = y + '-' + pad(mo + 1) + '-' + pad(dd);
+    const info = dayInfo(m, d);
+    const l = m.logs[d];
+    let bg = 'transparent', fg = 'var(--ink)';
+    if (info && info.per === 'act') { bg = PINK; fg = '#fff'; }
+    else if (info && info.per === 'pred') bg = hexA(PINK, .3);
+    else if (info && info.ovu) bg = hexA(YELLOW, .3);
+    // one dot per day: other bleeding first, then flow, then discharge; a note alone gets an outline dot
+    let dot = null;
+    if (l) dot = l.spot ? { background: YELLOW } : l.flow ? { background: PINK } : l.mucus ? { background: '#adaca5' } : { border: '1.2px solid #adaca5' };
+    const isSel = d === mSel, isT = d === today;
+    days.push(html`<button key=${d} className=${'cday' + (isSel ? ' sel' : '') + (isT ? ' today' : '') + (bg !== 'transparent' ? ' filled' : '')}
+      aria-label=${mdZh(d) + (isT ? '，今天' : '')} aria-pressed=${isSel ? 'true' : 'false'} onClick=${() => setMSel(d)}>
+      <span key=${isSel ? 's' : 'n'} className="c" style=${{ background: bg, color: fg }}>${dd}<span className="ring"></span></span>
+      ${dot && html`<span className="mk" style=${dot}></span>`}
+    </button>`);
+  }
+  const selInfo = dayInfo(m, mSel);
+  let futureText = '這天還沒到，還不能記錄哦';
+  if (selInfo && selInfo.per === 'pred') futureText = '預計經期第 ' + selInfo.day + ' 天';
+  else if (selInfo && selInfo.ovu) futureText = '預計是排卵期';
+  return html`<div className="screen">
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" onClick=${openSettings}><${Icon} name="menu" /></button>`} />
+    <nav className="tabs">
+      ${VIEWS.map((v, i) => html`<button key=${v} className="tab bl" aria-pressed=${view === v ? 'true' : 'false'} onClick=${() => setView(v)}>${['Main', 'Month', 'Year'][i]}</button>`)}
+    </nav>
+    <section className="calcard" style=${{ marginTop: '-2px' }} onPointerDown=${swDown} onPointerUp=${swUp}>
+      <div className="cal-head">
+        <button className="arrow bl" aria-label="上個月" onClick=${() => shiftMonth(-1)}><${Icon} name="left" /></button>
+        <button key=${'t' + mOff} className=${'cal-title titlebtn ' + calAnim} aria-label="回到本月" onClick=${jumpMonth}>${y}年 ${mo + 1}月</button>
+        <button className="arrow bl" aria-label="下個月" onClick=${() => shiftMonth(1)}><${Icon} name="right" /></button>
+      </div>
+      <div key=${'g' + mOff} className=${calAnim}>
+        <div className="cal-grid">${DOW.map(l => html`<div key=${l} className="cal-l">${l}</div>`)}</div>
+        <div className="cal-grid cal-days">${days}</div>
+      </div>
+    </section>
+    <section className="daycard" style=${{ marginTop: '-4px' }}>
+      <div key=${mSel} className="day-title fade-in">${mSel.slice(0, 4)}年 ${+mSel.slice(5, 7)}月 ${+mSel.slice(8)}日</div>
+      ${mSel > today
+        ? html`<div className="future">${futureText}</div>`
+        : html`<${RecordRows} store=${store} date=${mSel} showToast=${showToast} />
+               <${PeriodTools} store=${store} date=${mSel} askDeletePeriod=${askDeletePeriod} />
+               <div style=${{ height: '10px' }}></div>`}
+    </section>
+  </div>`;
+}
+
+/* ---------- year ---------- */
+function Year({ store, today, toggleTheme, openSettings, view, setView, year, setYear, calAnim }) {
+  const m = store.model;
+  const firstYear = m.periods.length ? +m.periods[0].s.slice(0, 4) : +today.slice(0, 4);
+  const thisYear = +today.slice(0, 4);
+  const rows = cycleRows(m, year);
+  const avgP = m.avgPeriod != null ? Math.round(m.avgPeriod) : null;
+  const avgC = m.avgCycle != null ? Math.round(m.avgCycle) : null;
+  const spotText = r => {
+    const parts = ['early', 'mid', 'late'].filter(k => r.cls[k]).map(k => CLASS_ZH[k] + ' ' + r.cls[k] + ' 天');
+    return parts.join('・');
+  };
+  return html`<div className="screen">
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" onClick=${openSettings}><${Icon} name="menu" /></button>`} />
+    <nav className="tabs">
+      ${VIEWS.map((v, i) => html`<button key=${v} className="tab bl" aria-pressed=${view === v ? 'true' : 'false'} onClick=${() => setView(v)}>${['Main', 'Month', 'Year'][i]}</button>`)}
+    </nav>
+    <div className="ysum" aria-label=${'平均經期 ' + (avgP || '—') + ' 天，平均週期 ' + (avgC || '—') + ' 天'}>
+      <div className="circ"></div>
+      <div className="yv" style=${{ left: 'calc(50% - 10.3px)', top: '44px' }}>
+        <span className="n" style=${{ color: PINK }}>${avgC || '—'}</span><span className="u" style=${{ color: PINK }}>天</span>
+        <span className="l">平均週期</span>
+      </div>
+      <div className="yfl" dangerouslySetInnerHTML=${{ __html: '<svg viewBox="67.8 203.34 126 126.61"><path fill="' + PINK + '" d="' + P_YEAR + '"/></svg>' }}></div>
+      <div className="yv" style=${{ left: 'calc(50% - 121.7px)', top: '44px', color: '#fff' }}>
+        <span className="n">${avgP || '—'}</span><span className="u">天</span>
+        <span className="l">平均經期</span>
+      </div>
+    </div>
+    <div className="ynav">
+      <button className="arrow bl" aria-label="前一年" disabled=${year <= firstYear} style=${{ opacity: year <= firstYear ? .35 : 1 }} onClick=${() => setYear(year - 1)}><${Icon} name="left" /></button>
+      <div key=${year} className=${'ynum ' + calAnim}>${year}</div>
+      <button className="arrow bl" aria-label="後一年" disabled=${year >= thisYear} style=${{ opacity: year >= thisYear ? .35 : 1 }} onClick=${() => setYear(year + 1)}><${Icon} name="right" /></button>
+    </div>
+    <div key=${'l' + year} className=${'ylist ' + calAnim}>
+      ${rows.length === 0 && html`<div className="empty">這一年還沒有紀錄哦</div>`}
+      ${rows.map(r => html`<div key=${r.p.s} className="ycard">
+        ${r.current
+          ? html`<div className="y1"><span className="bigu">目前週期</span><span className="rng">開始於${mdZh(r.p.s)}</span></div>`
+          : html`<div className="y1"><span><span className="big">${r.cycleLen}</span><span className="bigu">天</span></span><span className="rng">${mdZh(r.p.s)}－${mdZh(r.end)}</span></div>`}
+        <div className="y2">
+          <span className="p">${r.ongoing ? '經期第 ' + r.perLen + ' 天' : '經期 ' + r.perLen + ' 天'}</span>
+          ${r.current && !r.ongoing && html`<span className="g">・週期第 ${r.cycleDay} 天</span>`}
+          ${r.spots > 0 && html`<span className="g">・其他出血 ${r.spots} 天</span>`}
+        </div>
+        ${r.spots > 0 && html`<div className="y3">${spotText(r)}</div>`}
+      </div>`)}
+    </div>
+  </div>`;
+}
+
+/* ---------- settings ---------- */
+function Settings({ store, onClose, onBackup, onPickRestore, toggleTheme, openCycle }) {
+  const last = store.data.lastBackup;
+  const stale = !last || (Date.now() - new Date(last).getTime()) > 14 * 864e5;
+  return html`<div className="screen tight">
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="關閉設定" onClick=${onClose}><${Icon} name="close" /></button>`} />
+    <div className="setlist" style=${{ marginTop: '10px' }}>
+      <button className="setrow bl soft" onClick=${onBackup}>
+        <span className="set-icon" style=${{ color: stale ? 'var(--danger)' : 'var(--brand)' }}><${Icon} name=${stale ? 'cloudUp' : 'cloudOk'} /></span>
+        <span><span className="set-title">備份檔案</span><span className=${'set-sub' + (stale ? ' warn' : '')}>${last ? fmtDate(last) : '還沒備份過'}</span></span>
+      </button>
+      <button className="setrow bl soft" onClick=${onPickRestore}>
+        <span className="set-icon" style=${{ color: 'var(--brand)' }}><${Icon} name="restore" /></span>
+        <span><span className="set-title">從備份還原</span><span className="set-sub">選擇之前存的備份檔</span></span>
+      </button>
+      <button className="setrow bl soft" onClick=${openCycle}>
+        <span className="set-icon" style=${{ color: 'var(--brand)' }}><${Icon} name="flowerLine" /></span>
+        <span className="set-title">我的生理週期</span>
+      </button>
+      <div className="setrow noicon"><span className="set-title">版本維護 Version ${VERSION.label}</span></div>
+    </div>
+    <p className="thanks">特別感謝 <span style=${{ display: 'flex' }} dangerouslySetInnerHTML=${{ __html: '<svg viewBox="157.7 477.05 13.6 11.58"><path fill="' + PINK + '" d="' + P_HEART + '"/></svg>' }}></span> 我的Claude阿澈</p>
+  </div>`;
+}
+function CycleSettings({ store, onClose, toggleTheme }) {
+  const m = store.model;
+  const st = store.data.settings || DEFAULT_SETTINGS;
+  const auto = st.mode !== 'manual';
+  const cur = { period: m.plen, cycle: m.cycle };
+  const n = Math.min(m.recentC.length, 6);
+  const enough = m.recentC.length > 0;
+  const bump = (k, dir) => {
+    const r = k === 'period' ? PERIOD_RANGE : CYCLE_RANGE;
+    const v = Math.max(r[0], Math.min(r[1], cur[k] + dir));
+    store.setSettings(Object.assign({ mode: 'manual', period: cur.period, cycle: cur.cycle }, { [k]: v }));
+  };
+  const stepper = (k, label) => {
+    const r = k === 'period' ? PERIOD_RANGE : CYCLE_RANGE;
+    return html`<div className="steprow">
+      <span className="set-title">${label}</span>
+      <div className="stepper">
+        <button className="step bl" aria-label=${label + '減少'} disabled=${cur[k] <= r[0]} onClick=${() => bump(k, -1)}><span className="c"><${Icon} name="minus" /></span></button>
+        <div className=${'step-n' + (auto ? ' dim' : '')} aria-live="polite">${cur[k]}</div>
+        <button className="step bl" aria-label=${label + '增加'} disabled=${cur[k] >= r[1]} onClick=${() => bump(k, 1)}><span className="c"><${Icon} name="plusSm" /></span></button>
+      </div>
+    </div>`;
+  };
+  return html`<div className="screen tight">
+    <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="回到設定" onClick=${onClose}><${Icon} name="close" /></button>`} />
+    <button className="setrow cyc-auto bl soft" style=${{ marginTop: '10px' }} aria-pressed=${auto ? 'true' : 'false'}
+      onClick=${() => store.setSettings(auto ? { mode: 'manual', period: cur.period, cycle: cur.cycle } : { mode: 'auto' })}>
+      <span className="set-title">依紀錄自動計算</span>
+      <span className=${'chkc' + (auto ? ' on' : '')}>${auto && html`<${Icon} name="tick" />`}</span>
+    </button>
+    <p className="cyc-sub">${auto
+      ? (enough ? html`目前平均：經期 ${m.plen} 天、週期 ${m.cycle} 天<br />依最近 ${n} 次週期計算` : html`紀錄還不夠，先用預設值<br />記下兩次經期後就會自動計算`)
+      : '目前使用手動設定，只會影響預測，不會改到統計'}</p>
+    <div className="sec-title">手動設定</div>
+    ${stepper('period', '經期天數')}
+    ${stepper('cycle', '週期天數')}
+    <p className="disclaim">預測根據過去紀錄推估<br />不能當避孕或醫療判斷依據</p>
+  </div>`;
+}
+
+/* ---------- app ---------- */
+function App() {
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const showToast = msg => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2600); };
+  const today = useToday();
+  const store = useStore(today);
+  const fileRef = useRef(null);
+  const [pendingRestore, setPendingRestore] = useState(null);
+  const [delPeriod, setDelPeriod] = useState(null);
+
+  const [view, setViewState] = useState(() => { const v = uiGet().view; return VIEWS.indexOf(v) >= 0 ? v : 'main'; });
+  const [page, setPage] = useState({ name: 'home', anim: '' });
+  const [sel, setSel] = useState(today);
+  const [mOff, setMOff] = useState(0);
+  const [mSel, setMSel] = useState(today);
+  const [calAnim, setCalAnim] = useState('');
+  const [year, setYearState] = useState(+today.slice(0, 4));
+  const [leaving, setLeaving] = useState(false);
+  const busy = useRef(false);
+
+  // a new day: the main page follows today again
+  const lastToday = useRef(today);
+  useEffect(() => {
+    if (lastToday.current === today) return;
+    if (sel === lastToday.current) setSel(today);
+    if (mSel === lastToday.current) setMSel(today);
+    lastToday.current = today;
+  }, [today]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const t = store.data.theme;
+    if (t === 'dark' || t === 'light') root.setAttribute('data-app', t); else root.removeAttribute('data-app');
+    const sync = () => {
+      const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+      const mt = document.getElementById('theme-color'); if (mt && bg) mt.setAttribute('content', bg);
+    };
+    sync();
+    const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    if (mq && mq.addEventListener) { mq.addEventListener('change', sync); return () => mq.removeEventListener('change', sync); }
+  }, [store.data.theme]);
+
+  const doBackup = async () => {
+    const snap = store.snapshot();
+    const name = 'blossom-backup-' + ymd(new Date()) + '.json';
+    const text = JSON.stringify(snap, null, 2);
+    let file = null;
+    try { file = new File([text], name, { type: 'application/json' }); } catch (e) {}
+    try {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        store.markBackup(); showToast('備份好了');
+        return;
+      }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      store.markBackup(); showToast('備份檔已下載');
+    } catch (e) { showToast('這台裝置沒辦法存備份檔'); }
+  };
+  const pickRestore = () => { if (fileRef.current) { fileRef.current.value = ''; fileRef.current.click(); } };
+  const onFile = e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try { setPendingRestore(parseBackup(String(r.result))); }
+      catch (err) { showToast('這個檔案不是 Blossom 的備份'); }
+    };
+    r.onerror = () => showToast('讀不到這個檔案');
+    r.readAsText(f);
+  };
+
+  const setView = v => {
+    if (v === view) return;
+    setPage({ name: 'home', anim: VIEWS.indexOf(v) > VIEWS.indexOf(view) ? 'in-r' : 'in-l' });
+    setViewState(v); uiSet({ view: v }); setCalAnim('');
+  };
+  const go = (name, anim) => { setPage({ name, anim: anim || '' }); try { window.scrollTo(0, 0); } catch (e) {} };
+  const shiftMonth = dir => {
+    const n = mOff + dir; if (n > 12 || n < -240) return;
+    setCalAnim(dir > 0 ? 'in-r' : 'in-l'); setMOff(n);
+  };
+  const jumpMonth = () => { if (mOff === 0) { setMSel(today); return; } setCalAnim(mOff < 0 ? 'in-r' : 'in-l'); setMOff(0); setMSel(today); };
+  const setYear = y => { setCalAnim(y > year ? 'in-r' : 'in-l'); setYearState(y); };
+  // main → record: the page around the flower fades, then the card grows its white sheet
+  const openRecord = d => {
+    if (busy.current) return; busy.current = true;
+    setLeaving(true);
+    setTimeout(() => { setLeaving(false); setPage({ name: 'record', date: d, anim: '' }); busy.current = false; try { window.scrollTo(0, 0); } catch (e) {} }, 150);
+  };
+  const closeRecord = () => {
+    if (busy.current) return; busy.current = true;
+    setLeaving(true);
+    setTimeout(() => { setLeaving(false); setPage({ name: 'home', anim: 'from-rec' }); busy.current = false; }, 270);
+  };
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    let dark;
+    if (store.data.theme) dark = store.data.theme === 'dark';
+    else if (root.getAttribute('data-theme')) dark = root.getAttribute('data-theme') === 'dark';
+    else dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    store.setTheme(dark ? 'light' : 'dark');
+  };
+  const openSettings = () => go('settings', 'in-r');
+  const common = { store, today, toggleTheme, openSettings, view, setView, showToast };
+
+  let body;
+  if (page.name === 'settings') body = html`<${Settings} store=${store} toggleTheme=${toggleTheme} onClose=${() => go('home', 'in-l')} onBackup=${doBackup} onPickRestore=${pickRestore} openCycle=${() => go('cycle', 'in-r')} />`;
+  else if (page.name === 'cycle') body = html`<${CycleSettings} store=${store} toggleTheme=${toggleTheme} onClose=${() => go('settings', 'in-l')} />`;
+  else if (page.name === 'record') body = html`<${Record} store=${store} today=${today} date=${page.date} toggleTheme=${toggleTheme} onDone=${closeRecord} leaving=${leaving} showToast=${showToast} askDeletePeriod=${setDelPeriod} />`;
+  else if (view === 'month') body = html`<${Month} ...${common} mOff=${mOff} shiftMonth=${shiftMonth} jumpMonth=${jumpMonth} mSel=${mSel} setMSel=${setMSel} calAnim=${calAnim} askDeletePeriod=${setDelPeriod} />`;
+  else if (view === 'year') body = html`<${Year} ...${common} year=${year} setYear=${setYear} calAnim=${calAnim} />`;
+  else body = html`<${Home} ...${common} sel=${sel} setSel=${setSel} openRecord=${openRecord} leaving=${leaving} anim=${page.anim} />`;
+
+  const pageKey = page.name === 'home' ? 'home-' + view : page.name;
+  const wrapAnim = page.anim === 'from-rec' ? '' : page.anim;
+  return html`<${React.Fragment}>
+    <div key=${pageKey} className=${wrapAnim}>${body}</div>
+    ${delPeriod && html`<div className="overlay fade-in" onClick=${e => { if (e.target === e.currentTarget) setDelPeriod(null); }}>
+      <div className="dialog pop-in" role="dialog" aria-modal="true" aria-labelledby="dp-t">
+        <div id="dp-t" className="dlg-title">刪除 ${md(delPeriod.s)} 開始的經期？</div>
+        <div className="dlg-text">每天記的月經量、備註會留著，只是這幾天不再算成經期</div>
+        <div className="dlg-btns">
+          <button className="pill bl" onClick=${() => setDelPeriod(null)}>取消</button>
+          <button className="pill danger bl" onClick=${() => { store.deletePeriod(delPeriod.s); setDelPeriod(null); showToast('刪除好了'); }}>刪除</button>
+        </div>
+      </div>
+    </div>`}
+    ${pendingRestore && html`<div className="overlay fade-in" onClick=${e => { if (e.target === e.currentTarget) setPendingRestore(null); }}>
+      <div className="dialog pop-in" role="dialog" aria-modal="true" aria-labelledby="rs-t">
+        <div id="rs-t" className="dlg-title">用這份備份還原？</div>
+        <div className="dlg-text">備份日期 ${pendingRestore.exportedAt ? fmtDate(pendingRestore.exportedAt) : '不明'}，有 ${pendingRestore.periods.length} 次經期紀錄，目前手機上的紀錄會被這份備份取代</div>
+        <div className="dlg-btns">
+          <button className="pill bl" onClick=${() => setPendingRestore(null)}>取消</button>
+          <button className="pill primary bl" onClick=${() => { store.restore(pendingRestore); setPendingRestore(null); go('home', 'in-l'); showToast('還原好了'); }}>還原</button>
+        </div>
+      </div>
+    </div>`}
+    <input ref=${fileRef} id="restore-file" type="file" accept="application/json,.json" style=${{ display: 'none' }} onChange=${onFile} />
+    ${toast && html`<div className="toast fade-in" role="status">${toast}</div>`}
+  </${React.Fragment}>`;
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(html`<${App} />`);
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body>
+</html>
