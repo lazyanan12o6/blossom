@@ -135,13 +135,14 @@ h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowr
 
 /* quick record cards: a card splits into its options, and the options fold back the same way */
 .qrow{display:flex;justify-content:center;gap:14px;margin-top:-2px}
-.qcard{position:relative;width:90px;height:115px;flex-shrink:0}
+/* each card keeps its own layer: the row starts on a half pixel, and switching layers mid-fade nudged the flower 1px */
+.qcard{position:relative;width:90px;height:115px;flex-shrink:0;will-change:transform}
 .qbase{position:absolute;inset:0;border:none;padding:0;border-radius:45px;background:var(--surface);color:var(--ink);transition:background-color .15s ease .55s}
 .qcard.open .qbase{background-color:transparent;transition-delay:0s}
 .qin{position:absolute;inset:0;transition:opacity .25s ease .45s}
 .qcard.open .qin{opacity:0;transition-delay:0s;transition-duration:.18s}
 .q-title{position:absolute;left:0;right:0;top:23px;font-size:12px;font-weight:500;letter-spacing:.1em;line-height:14px;text-align:center}
-.q-flower{position:absolute;left:50%;top:46px;width:27.4px;height:27.6px;margin-left:-13.7px}
+.q-flower{position:absolute;left:31px;top:46px;width:27.4px;height:27.6px}
 .q-flower svg{width:100%;height:100%;display:block;overflow:visible}
 .q-flower path{transition:fill .35s ease}
 .q-val{position:absolute;left:0;right:0;top:87px;font-size:9px;letter-spacing:.1em;line-height:12px;text-align:center;color:var(--ink)}
@@ -463,7 +464,7 @@ function cycleRows(m, year) {
 const DATA_KEY = 'blossom:data';
 const UI_KEY = 'blossom:ui';
 // semantic version: big rework . new feature . small fix
-const VERSION = { label: '1.3.1', date: '2026.10.16' };
+const VERSION = { label: '1.3.2', date: '2026.10.16' };
 const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
 function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
 function cleanLog(l) {
