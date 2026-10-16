@@ -54,7 +54,18 @@ html,body{overscroll-behavior:none}
 /* the main page is pinned: no scrolling, no rubber-band */
 html.lock,html.lock body{height:100%;overflow:hidden}
 /* switching light/dark: everything changes colour together, at one speed */
-html.theming *,html.theming *::before,html.theming *::after{transition:background-color .5s ease,color .5s ease,border-color .5s ease,fill .5s ease,box-shadow .5s ease!important;transition-delay:0s!important}
+@property --bg{syntax:'<color>';inherits:true;initial-value:#eeeeeb}
+@property --surface{syntax:'<color>';inherits:true;initial-value:#ffffff}
+@property --ink{syntax:'<color>';inherits:true;initial-value:#323232}
+@property --muted{syntax:'<color>';inherits:true;initial-value:#75746e}
+@property --ring{syntax:'<color>';inherits:true;initial-value:#adaca5}
+@property --track{syntax:'<color>';inherits:true;initial-value:#eeeeeb}
+@property --bud{syntax:'<color>';inherits:true;initial-value:#eeeeeb}
+@property --card-mix{syntax:'<percentage>';inherits:true;initial-value:100%}
+@property --glow-op{syntax:'<number>';inherits:true;initial-value:1}
+@property --glow-s{syntax:'<number>';inherits:true;initial-value:1}
+html.theming{transition:--bg .5s ease,--surface .5s ease,--ink .5s ease,--muted .5s ease,--ring .5s ease,--track .5s ease,--bud .5s ease,--card-mix .5s ease,--glow-op .5s ease,--glow-s .5s ease}
+html.theming *,html.theming *::before,html.theming *::after{transition:none!important}
 body{-webkit-touch-callout:none;padding-top:env(safe-area-inset-top,0px);-webkit-user-select:none;user-select:none;touch-action:manipulation}
 input,textarea{-webkit-user-select:text;user-select:text}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);transition:background-color .5s ease,color .5s ease;-webkit-font-smoothing:antialiased}
@@ -71,6 +82,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .logo{width:48px;height:48px;margin-left:-4px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .logo svg{width:36px;height:36px;overflow:visible}
 h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.homebtn{border:none;background:transparent;padding:6px 0;color:inherit;font-family:inherit}
 .iconbtn{width:48px;height:48px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;color:var(--ring)}
 
 /* tabs */
@@ -296,7 +308,6 @@ const PH = {
   lut: { name: '黃體期', color: '#b1c45f', glow: '#ffed9f' }
 };
 const PINK = '#f48292', YELLOW = '#fcb454';
-const OV_SOFT = '#fdcb87';   // predicted ovulation on the blue, green and pink cards
 const OV_DEEP = '#f99746';   // predicted ovulation on the yellow card
 const ITEMS = [
   { k: 'flow', label: '月經量', color: PINK, opts: ['量少', '中等', '量多'] },
@@ -384,7 +395,7 @@ function buildModel(data, today) {
     const over = today > n0 ? diffD(n0, today) : 0;
     gap = over > LATE_MAX;            // more than two weeks: the records are missing, not the period
     late = gap ? 0 : over;
-    base = late ? addD(today, 1) : n0;
+    base = n0;
     if (base <= last.e) base = addD(last.e, 1);
   }
   return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, late, gap, base,
@@ -403,6 +414,14 @@ function calcDay(m, d) {
   let cs, pe, N, Nov, pred = false;
   if (next) { cs = p.s; pe = p.e; N = next.s; Nov = N; }
   else if (d < m.base) { cs = p.s; pe = p.e; N = m.base; Nov = m.n0; }
+  else if (m.late && d <= m.today) {
+    // late: the predicted days stay pale where they were, but the period hasn't come, so this is still the luteal phase
+    const ov = addD(m.n0, -14), o2 = addD(ov, 1);
+    const start = p.e > o2 ? addD(p.e, 1) : addD(o2, 1);
+    const inWin = d < addD(m.n0, m.plen);
+    return { phase: 'lut', day: diffD(start, d) + 1, cs: p.s, pe: p.e, N: m.n0, ov, pred: false, nextAt: m.n0, nextPhase: 'men',
+      per: inWin ? 'pred' : null, ovu: false, late: diffD(m.n0, d), actual: p };
+  }
   else {
     const k = Math.floor(diffD(m.base, d) / m.cycle);
     cs = addD(m.base, k * m.cycle); pe = addD(cs, m.plen - 1); N = addD(cs, m.cycle); Nov = N; pred = true;
@@ -417,7 +436,7 @@ function calcDay(m, d) {
   else { phase = 'lut'; start = pe > o2 ? afterPe : addD(o2, 1); nextAt = N; nextPhase = 'men'; }
   return { phase, day: diffD(start, d) + 1, cs, pe, N, ov, pred, nextAt, nextPhase,
     per: phase === 'men' ? (!pred && d <= m.today ? 'act' : 'pred') : null,
-    ovu: phase === 'ovu', late: !next && !pred && m.late > 0 && d > m.n0, actual: !pred ? p : null };
+    ovu: phase === 'ovu', late: 0, actual: !pred ? p : null };
 }
 // where other bleeding falls in its cycle: the clinic's early / mid / late cycle
 function bleedClass(d, ov) {
@@ -452,7 +471,7 @@ function cycleRows(m, year) {
 const DATA_KEY = 'blossom:data';
 const UI_KEY = 'blossom:ui';
 // semantic version: big rework . new feature . small fix
-const VERSION = { label: '1.1.1', date: '2026.10.16' };
+const VERSION = { label: '1.2.0', date: '2026.10.16' };
 const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
 function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
 function cleanLog(l) {
@@ -574,11 +593,12 @@ const uiSet = o => { try { localStorage.setItem(UI_KEY, JSON.stringify(Object.as
 })();
 
 /* ---------- header ---------- */
+let GO_HOME = () => {};
 function Header({ toggleTheme, right }) {
   return html`<header className="top">
     <div className="brand">
       <button className="logo" aria-label="切換深色或淺色" onClick=${toggleTheme} dangerouslySetInnerHTML=${{ __html: LOGO }}></button>
-      <h1>Blossom</h1>
+      <button className="homebtn" aria-label="回到主頁" onClick=${() => GO_HOME()}><h1>Blossom</h1></button>
     </div>
     ${right}
   </header>`;
@@ -586,13 +606,13 @@ function Header({ toggleTheme, right }) {
 
 /* ---------- main: week strip ---------- */
 // slide to move the day in the middle (the flower, the card and the quick cards show that day);
-// tap any day to mark or unmark the period there, in place
+// tap a day to bring it to the middle; tap the middle day again to mark or unmark the period (same as the month calendar)
 const STEP = 42.5;
 function stripLook(info, cardPhase) {
   if (!info) return null;
   if (info.per === 'act') return { bg: '#ffffff', fg: '#323232' };
   if (info.per === 'pred') return { bg: 'rgba(255,255,255,.3)', fg: '#ffffff' };
-  if (info.ovu) return { bg: cardPhase === 'ovu' ? OV_DEEP : OV_SOFT, fg: '#ffffff' };
+  if (info.ovu) return { bg: cardPhase === 'ovu' ? OV_DEEP : YELLOW, fg: '#ffffff' };
   return null;
 }
 function WeekStrip({ m, sel, setSel, today, cardPhase, onMark, pop }) {
@@ -638,8 +658,8 @@ function WeekStrip({ m, sel, setSel, today, cardPhase, onMark, pop }) {
     const fade = Math.max(0, Math.min(1, (4 * STEP - Math.abs(i * STEP + off)) / STEP));
     const popped = pop && pop.d === d;
     cells.push(html`<button key=${d} className=${'sday' + (isSel ? ' sel' : '')} tabIndex=${Math.abs(i) > 3 ? -1 : 0} style=${{ left: 'calc(50% + ' + (i * STEP) + 'px)', opacity: fade }}
-      aria-label=${mdZh(d) + (isT ? '，今天' : '') + (info && info.per === 'act' ? '，經期' : '') + '，點一下標記或取消經期'}
-      onClick=${() => { if (Date.now() - tapBlock.current < 300) return; onMark(d); }}>
+      aria-label=${mdZh(d) + (isT ? '，今天' : '') + (info && info.per === 'act' ? '，經期' : '') + (isSel ? '，再點一下標記或取消經期' : '')}
+      onClick=${() => { if (Date.now() - tapBlock.current < 300) return; if (isSel) onMark(d); else slide(i * STEP, d); }}>
       <span className="wd">${DOW[parseYmd(d).getDay()]}</span>
       <span key=${popped ? 'p' + pop.n : 'c'} className=${'dot-c' + (popped ? ' pop' : '')} style=${{ background: look ? look.bg : 'transparent', boxShadow: ring || 'none' }}></span>
       <span className="num" style=${{ color: look ? look.fg : '#ffffff' }}>${+d.slice(8)}</span>
@@ -714,7 +734,7 @@ function FlowerText({ m, info, date, mode }) {
     ${mode === 'rec'
       ? html`<span className="f-txt f-date f-swap"><b>${+date.slice(5, 7)}</b>月 <b>${+date.slice(8)}</b>日</span>`
       : info.late
-        ? html`<span className="f-txt f-sub">經期比預計<br />晚 ${diffD(m.n0, date)} 天</span>`
+        ? html`<span className="f-txt f-sub">預計 ${md(info.N)} 開始<br />晚了 ${info.late} 天</span>`
         : html`<span className="f-txt f-sub">${sub}<br />${md(info.cs)} 開始</span>`}
   </${React.Fragment}>`;
 }
@@ -1172,6 +1192,14 @@ function App() {
     store.setTheme(dark ? 'light' : 'dark');
   };
   const openSettings = () => go('settings', 'in-r');
+  // "Blossom" in the header: back to Main, on today
+  GO_HOME = () => {
+    setSel(today);
+    if (page.name === 'home' && view === 'main') return;
+    setViewState('main'); uiSet({ view: 'main' }); setLeaving(false); busy.current = false;
+    setPage({ name: 'home', anim: 'in-l' });
+    try { window.scrollTo(0, 0); } catch (e) {}
+  };
   const common = { store, today, toggleTheme, openSettings, view, setView, showToast };
   // the main page is pinned in place; every other page scrolls when it needs to
   const pinned = page.name === 'home' && view === 'main';
