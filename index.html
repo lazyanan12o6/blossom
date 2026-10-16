@@ -110,8 +110,8 @@ h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowr
 .f-phase{top:56px;font-size:20px;font-weight:600;transition:color .5s ease}
 .f-day{top:89px;font-size:24px;font-weight:600}
 .f-day b{font-size:30px;font-weight:600;margin:0 .22em}
-.f-day .f-wait{font-size:28px;margin:0}
 .f-sub{top:130px;font-size:11px;font-weight:400;line-height:18px}
+.f-sub.f-one{top:139px}
 .f-date{top:131px;font-size:12px}
 .f-date b{font-size:16px;font-weight:400;margin-right:.05em}
 .f-empty{top:94px;font-size:12px;line-height:20px;color:var(--muted)}
@@ -319,7 +319,6 @@ const DOW = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const VIEWS = ['main', 'month', 'year'];
 const PERIOD_RANGE = [2, 10], CYCLE_RANGE = [18, 60];
-const LATE_MAX = 14;   // days a period can be late before we treat it as missing records
 
 /* ---------- shapes from the design files ---------- */
 const P_LOGO = 'M31.92,18.31c-.37-.43-.37-1.07,0-1.49,1.77-2.01,2.13-4.91.65-7.3-1.5-2.44-4.44-3.62-7.26-3.17-.51.08-1.02-.21-1.21-.69-.97-2.47-3.52-4.24-6.52-4.26-3-.01-5.57,1.73-6.57,4.19-.19.48-.71.77-1.22.68-2.81-.48-5.77.68-7.29,3.1-1.5,2.38-1.18,5.28.57,7.31.37.43.37,1.07,0,1.49-1.77,2.01-2.13,4.91-.65,7.3,1.5,2.44,4.44,3.62,7.26,3.17.51-.08,1.02.21,1.21.69.97,2.47,3.52,4.24,6.52,4.26,3,.01,5.57-1.73,6.57-4.19.19-.48.71-.77,1.22-.68,2.81.48,5.77-.68,7.29-3.1,1.5-2.38,1.18-5.28-.57-7.31Z';
@@ -390,16 +389,15 @@ function buildModel(data, today) {
   const cycle = manual ? st.cycle : recentC.length ? Math.round(mean(recentC)) : 28;
   const plen = manual ? st.period : recentP.length ? Math.round(mean(recentP)) : 5;
   const last = periods[periods.length - 1] || null;
-  let n0 = null, late = 0, base = null, gap = false;
+  // the app only records and predicts: the next period is the last first day + the average cycle,
+  // and the predictions keep going from there until a new first day is marked
+  let n0 = null, base = null;
   if (last) {
     n0 = addD(last.s, cycle);
-    const over = today > n0 ? diffD(n0, today) : 0;
-    gap = over > LATE_MAX;            // more than two weeks: the records are missing, not the period
-    late = gap ? 0 : over;
     base = n0;
     if (base <= last.e) base = addD(last.e, 1);
   }
-  return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, late, gap, base,
+  return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, base,
     avgCycle: cycles.length ? mean(cycles) : null, avgPeriod: plens.length ? mean(plens) : null, cache: new Map() };
 }
 function dayInfo(m, d) {
@@ -415,14 +413,6 @@ function calcDay(m, d) {
   let cs, pe, N, Nov, pred = false;
   if (next) { cs = p.s; pe = p.e; N = next.s; Nov = N; }
   else if (d < m.base) { cs = p.s; pe = p.e; N = m.base; Nov = m.n0; }
-  else if (m.late && d <= m.today) {
-    // late: the predicted days stay pale where they were, but the period hasn't come, so this is still the luteal phase
-    const ov = addD(m.n0, -14), o2 = addD(ov, 1);
-    const start = p.e > o2 ? addD(p.e, 1) : addD(o2, 1);
-    const inWin = d < addD(m.n0, m.plen);
-    return { phase: 'lut', day: diffD(start, d) + 1, cs: p.s, pe: p.e, N: m.n0, ov, pred: false, nextAt: m.n0, nextPhase: 'men',
-      per: inWin ? 'pred' : null, ovu: false, late: diffD(m.n0, d), actual: p };
-  }
   else {
     const k = Math.floor(diffD(m.base, d) / m.cycle);
     cs = addD(m.base, k * m.cycle); pe = addD(cs, m.plen - 1); N = addD(cs, m.cycle); Nov = N; pred = true;
@@ -435,11 +425,9 @@ function calcDay(m, d) {
   else if (d < o1) { phase = 'fol'; start = afterPe; nextAt = o1; nextPhase = 'ovu'; }
   else if (d <= o2) { phase = 'ovu'; start = pe >= o1 ? afterPe : o1; nextAt = addD(o2, 1); nextPhase = 'lut'; }
   else { phase = 'lut'; start = pe > o2 ? afterPe : addD(o2, 1); nextAt = N; nextPhase = 'men'; }
-  // late, and this future day sits in the predicted days that haven't come: no day count can be known yet
-  const wait = pred && phase === 'men' && m.late > 0 && d > m.today && cs === m.n0;
   return { phase, day: diffD(start, d) + 1, cs, pe, N, ov, pred, nextAt, nextPhase,
     per: phase === 'men' ? (!pred && d <= m.today ? 'act' : 'pred') : null,
-    ovu: phase === 'ovu', late: wait ? m.late : 0, wait, actual: !pred ? p : null };
+    ovu: phase === 'ovu', actual: !pred ? p : null };
 }
 // where other bleeding falls in its cycle: the clinic's early / mid / late cycle
 function bleedClass(d, ov) {
@@ -453,7 +441,8 @@ function cycleRows(m, year) {
   P.forEach((p, i) => {
     if (+p.s.slice(0, 4) !== year || p.s > m.today) return;
     const next = P[i + 1];
-    const gapped = !next && m.gap;
+    // the predicted first day has come and gone with nothing marked yet
+    const gapped = !next && m.n0 <= m.today;
     const end = next ? addD(next.s, -1) : gapped ? addD(m.n0, -1) : m.today;
     const ov = addD(next ? next.s : addD(p.s, m.cycle), -14);
     const cls = { early: 0, mid: 0, late: 0 };
@@ -474,7 +463,7 @@ function cycleRows(m, year) {
 const DATA_KEY = 'blossom:data';
 const UI_KEY = 'blossom:ui';
 // semantic version: big rework . new feature . small fix
-const VERSION = { label: '1.2.1', date: '2026.10.16' };
+const VERSION = { label: '1.3.0', date: '2026.10.16' };
 const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
 function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
 function cleanLog(l) {
@@ -730,16 +719,16 @@ function FlowerText({ m, info, date, mode }) {
     </${React.Fragment}>`;
   }
   const c = PH[info.phase].color;
+  // a predicted period day that hasn't been marked
+  const predMen = info.pred && info.phase === 'men';
   const sub = info.pred ? '預計經期' : info.phase === 'men' ? '本次經期' : '上次經期';
   return html`<${React.Fragment}>
-    <span className="f-txt f-phase" style=${{ color: c }}>${PH[info.phase].name}</span>
-    ${info.wait
-      ? html`<span className="f-txt f-day"><b className="f-wait">預計中</b></span>`
-      : html`<span className="f-txt f-day">第<b>${info.day}</b>天</span>`}
+    <span className="f-txt f-phase" style=${{ color: c }}>${predMen ? '預計經期' : PH[info.phase].name}</span>
+    <span className="f-txt f-day">第<b>${info.day}</b>天</span>
     ${mode === 'rec'
       ? html`<span className="f-txt f-date f-swap"><b>${+date.slice(5, 7)}</b>月 <b>${+date.slice(8)}</b>日</span>`
-      : info.late
-        ? html`<span className="f-txt f-sub">預計 ${md(info.wait ? info.cs : info.N)} 開始<br />晚了 ${info.late} 天</span>`
+      : predMen
+        ? html`<span className="f-txt f-sub f-one">${md(info.cs)}－${md(info.pe)}</span>`
         : html`<span className="f-txt f-sub">${sub}<br />${md(info.cs)} 開始</span>`}
   </${React.Fragment}>`;
 }
@@ -919,8 +908,7 @@ function Month({ store, today, toggleTheme, openSettings, view, setView, mOff, s
   }
   const selInfo = dayInfo(m, mSel);
   let futureText = '這天還沒到，還不能記錄哦';
-  if (selInfo && selInfo.wait) futureText = '預計經期，還沒開始哦';
-  else if (selInfo && selInfo.per === 'pred') futureText = '預計經期第 ' + selInfo.day + ' 天';
+  if (selInfo && selInfo.per === 'pred') futureText = '預計經期第 ' + selInfo.day + ' 天';
   else if (selInfo && selInfo.ovu) futureText = '預計是排卵期';
   return html`<div className="screen">
     <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" onClick=${openSettings}><${Icon} name="menu" /></button>`} />
@@ -987,7 +975,7 @@ function Year({ store, today, toggleTheme, openSettings, view, setView, year, se
         ${r.current
           ? html`<div className="y1"><span className="bigu">目前週期</span><span className="rng">開始於${mdZh(r.p.s)}</span></div>`
           : r.gapped
-          ? html`<div className="y1"><span className="bigu">${mdZh(r.p.s)}開始</span><span className="rng">之後還沒有紀錄</span></div>`
+          ? html`<div className="y1"><span className="bigu">${mdZh(r.p.s)}開始</span><span className="rng">預計${mdZh(m.n0)}開始・還沒有紀錄</span></div>`
           : html`<div className="y1"><span><span className="big">${r.cycleLen}</span><span className="bigu">天</span></span><span className="rng">${mdZh(r.p.s)}－${mdZh(r.end)}</span></div>`}
         <div className="y2">
           <span className="p">${r.ongoing ? '經期第 ' + r.perLen + ' 天' : '經期 ' + r.perLen + ' 天'}</span>

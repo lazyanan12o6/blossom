@@ -1,6 +1,6 @@
 // Blossom — keeps the app working offline.
 // When the app is updated, change VERSION so phones pick up the new files.
-const VERSION = 'blossom-v5';
+const VERSION = 'blossom-v6';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './vendor/react.production.min.js', './vendor/react-dom.production.min.js', './vendor/htm.umd.js',
