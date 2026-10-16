@@ -23,6 +23,7 @@
 :root{
   --bg:#eeeeeb; --surface:#ffffff; --ink:#323232; --muted:#75746e; --ring:#adaca5; --track:#eeeeeb; --bud:#eeeeeb;
   --brand:#f48292; --on-brand:#ffffff; --danger:#c9505b; --scrim:rgba(50,50,50,.35);
+  --card-mix:100%; --glow-op:1; --glow-s:1;
   --f-ui:'Montserrat','PingFang TC','Noto Sans TC',system-ui,sans-serif;
   --f-num:'Poppins','Montserrat',system-ui,sans-serif;
 }
@@ -30,21 +31,21 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
-    --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+    --danger:#ec8a93; --scrim:rgba(0,0,0,.5); --card-mix:78%; --glow-op:.4; --glow-s:.86; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
-  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); --card-mix:78%; --glow-op:.4; --glow-s:.86; color-scheme:dark;
 }
 /* the logo switch inside the app wins over the system setting */
 :root[data-app="light"]{
   --bg:#eeeeeb; --surface:#ffffff; --ink:#323232; --muted:#75746e; --ring:#adaca5; --track:#eeeeeb; --bud:#eeeeeb;
-  --danger:#c9505b; --scrim:rgba(50,50,50,.35); color-scheme:light;
+  --danger:#c9505b; --scrim:rgba(50,50,50,.35); --card-mix:100%; --glow-op:1; --glow-s:1; color-scheme:light;
 }
 :root[data-app="dark"]{
   --bg:#323232; --surface:#424242; --ink:#eeeeeb; --muted:#b3b2ab; --ring:#8f8e88; --track:#383838; --bud:#565654;
-  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); color-scheme:dark;
+  --danger:#ec8a93; --scrim:rgba(0,0,0,.5); --card-mix:78%; --glow-op:.4; --glow-s:.86; color-scheme:dark;
 }
 
 html,body{min-height:100%;margin:0}
@@ -52,6 +53,8 @@ html{-webkit-text-size-adjust:100%}
 html,body{overscroll-behavior:none}
 /* the main page is pinned: no scrolling, no rubber-band */
 html.lock,html.lock body{height:100%;overflow:hidden}
+/* switching light/dark: everything changes colour together, at one speed */
+html.theming *,html.theming *::before,html.theming *::after{transition:background-color .5s ease,color .5s ease,border-color .5s ease,fill .5s ease,box-shadow .5s ease!important;transition-delay:0s!important}
 body{-webkit-touch-callout:none;padding-top:env(safe-area-inset-top,0px);-webkit-user-select:none;user-select:none;touch-action:manipulation}
 input,textarea{-webkit-user-select:text;user-select:text}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);transition:background-color .5s ease,color .5s ease;-webkit-font-smoothing:antialiased}
@@ -87,7 +90,7 @@ h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowr
 /* main: flower, phase card, glow */
 .stage{position:relative;height:353px;margin-top:7px}
 .pcard{position:absolute;left:0;right:0;top:153px;height:200px;border-radius:25px;overflow:hidden;transition:background-color .6s ease}
-.glow{position:absolute;left:50%;top:6px;width:290px;height:257px;margin-left:-145px;pointer-events:none;transition:opacity .6s ease}
+.glow{position:absolute;left:50%;top:6px;width:290px;height:257px;margin-left:-145px;pointer-events:none;transform:scale(var(--glow-s));transition:opacity .6s ease}
 .flower{position:absolute;left:50%;top:0;width:202px;height:203px;margin-left:-101px;border:none;padding:0;background:transparent;color:var(--ink)}
 .flower svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .flower svg path{fill:var(--surface);transition:fill .5s ease}
@@ -304,6 +307,7 @@ const DOW = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const VIEWS = ['main', 'month', 'year'];
 const PERIOD_RANGE = [2, 10], CYCLE_RANGE = [18, 60];
+const LATE_MAX = 14;   // days a period can be late before we treat it as missing records
 
 /* ---------- shapes from the design files ---------- */
 const P_LOGO = 'M31.92,18.31c-.37-.43-.37-1.07,0-1.49,1.77-2.01,2.13-4.91.65-7.3-1.5-2.44-4.44-3.62-7.26-3.17-.51.08-1.02-.21-1.21-.69-.97-2.47-3.52-4.24-6.52-4.26-3-.01-5.57,1.73-6.57,4.19-.19.48-.71.77-1.22.68-2.81-.48-5.77.68-7.29,3.1-1.5,2.38-1.18,5.28.57,7.31.37.43.37,1.07,0,1.49-1.77,2.01-2.13,4.91-.65,7.3,1.5,2.44,4.44,3.62,7.26,3.17.51-.08,1.02.21,1.21.69.97,2.47,3.52,4.24,6.52,4.26,3,.01,5.57-1.73,6.57-4.19.19-.48.71-.77,1.22-.68,2.81.48,5.77-.68,7.29-3.1,1.5-2.38,1.18-5.28-.57-7.31Z';
@@ -341,6 +345,8 @@ function NextFlower({ color }) {
   return html`<span aria-hidden="true" style=${{ display: 'flex' }} dangerouslySetInnerHTML=${{ __html:
     '<svg viewBox="0 0 35 35"><path fill="' + color + '" d="' + P_LOGO + '"/><circle fill="#fff" cx="15.64" cy="19.36" r="1.7"/><circle fill="#fff" cx="23.12" cy="19.36" r="1.7"/></svg>' }}></span>`;
 }
+// phase cards are a little see-through in dark mode so the white text stands out
+const cardBg = c => 'color-mix(in srgb, ' + c + ' var(--card-mix), transparent)';
 const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
 const glowBg = c => 'radial-gradient(ellipse closest-side at 50% 50%,' + [[1, 0], [.98, 2], [.57, 37], [.26, 65], [.07, 85], [0, 95]].map(s => hexA(c, s[0]) + ' ' + s[1] + '%').join(',') + ')';
 
@@ -372,14 +378,16 @@ function buildModel(data, today) {
   const cycle = manual ? st.cycle : recentC.length ? Math.round(mean(recentC)) : 28;
   const plen = manual ? st.period : recentP.length ? Math.round(mean(recentP)) : 5;
   const last = periods[periods.length - 1] || null;
-  let n0 = null, late = 0, base = null;
+  let n0 = null, late = 0, base = null, gap = false;
   if (last) {
     n0 = addD(last.s, cycle);
-    late = today > n0 ? diffD(n0, today) : 0;
+    const over = today > n0 ? diffD(n0, today) : 0;
+    gap = over > LATE_MAX;            // more than two weeks: the records are missing, not the period
+    late = gap ? 0 : over;
     base = late ? addD(today, 1) : n0;
     if (base <= last.e) base = addD(last.e, 1);
   }
-  return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, late, base,
+  return { periods, logs: data.logs || {}, today, cycle, plen, manual, cycles, plens, recentC, recentP, last, n0, late, gap, base,
     avgCycle: cycles.length ? mean(cycles) : null, avgPeriod: plens.length ? mean(plens) : null, cache: new Map() };
 }
 function dayInfo(m, d) {
@@ -423,7 +431,8 @@ function cycleRows(m, year) {
   P.forEach((p, i) => {
     if (+p.s.slice(0, 4) !== year || p.s > m.today) return;
     const next = P[i + 1];
-    const end = next ? addD(next.s, -1) : m.today;
+    const gapped = !next && m.gap;
+    const end = next ? addD(next.s, -1) : gapped ? addD(m.n0, -1) : m.today;
     const ov = addD(next ? next.s : addD(p.s, m.cycle), -14);
     const cls = { early: 0, mid: 0, late: 0 };
     let spots = 0;
@@ -433,7 +442,7 @@ function cycleRows(m, year) {
       spots++; cls[bleedClass(d, ov)]++;
     }
     const ongoing = !next && p.e >= m.today;
-    rows.push({ p, next, end, current: !next, cycleLen: next ? diffD(p.s, next.s) : null,
+    rows.push({ p, next, end, current: !next && !gapped, gapped, cycleLen: next ? diffD(p.s, next.s) : null,
       perLen: diffD(p.s, ongoing ? m.today : p.e) + 1, ongoing, cycleDay: diffD(p.s, m.today) + 1, spots, cls });
   });
   return rows.reverse();
@@ -443,7 +452,7 @@ function cycleRows(m, year) {
 const DATA_KEY = 'blossom:data';
 const UI_KEY = 'blossom:ui';
 // semantic version: big rework . new feature . small fix
-const VERSION = { label: '1.1.0', date: '2026.10.16' };
+const VERSION = { label: '1.1.1', date: '2026.10.16' };
 const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
 function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
 function cleanLog(l) {
@@ -454,13 +463,22 @@ function cleanLog(l) {
 }
 // recording a flow makes sure the day sits inside a period:
 // close after an earlier period (≤2 days) → stretch it; just before the next one → start it earlier; otherwise a new period with the usual length
-function withPeriodAt(periods, d, plen) {
+function withPeriodAt(periods, d, plen, today, logs) {
   const P = sortP(periods);
   if (P.some(p => p.s <= d && d <= p.e)) return P;
   let prev = null, nxt = null;
   P.forEach(p => { if (p.e < d) prev = p; else if (p.s > d && !nxt) nxt = p; });
   if (prev && diffD(prev.e, d) <= 2) return P.map(p => p === prev ? { s: p.s, e: d } : p);
-  if (nxt && diffD(d, nxt.s) <= 2) return P.map(p => p === nxt ? { s: d, e: p.e } : p);
+  // a day up to one period-length before the next period becomes its first day;
+  // the length is counted again from there, keeping days already past and days with a recorded flow
+  if (nxt && diffD(d, nxt.s) <= plen) {
+    let e = addD(d, plen - 1);
+    const kept = nxt.e < today ? nxt.e : today;
+    if (kept > e) e = kept;
+    for (let x = nxt.s; x <= nxt.e; x = addD(x, 1)) if (logs && logs[x] && logs[x].flow && x > e) e = x;
+    if (e > nxt.e) e = nxt.e;
+    return sortP(P.map(p => p === nxt ? { s: d, e } : p));
+  }
   let e = addD(d, plen - 1);
   if (nxt && e >= nxt.s) e = addD(nxt.s, -1);
   return sortP(P.concat([{ s: d, e }]));
@@ -469,10 +487,10 @@ function withPeriodAt(periods, d, plen) {
 //   not in a period → mark it (same rules as recording a flow)
 //   the first day → remove the whole period (asks first)
 //   a later day → the period ends the day before (asks first only if flow records would go)
-function planMark(data, d, plen) {
+function planMark(data, d, plen, today) {
   const P = sortP(data.periods || []), logs = data.logs || {};
   const p = P.find(x => x.s <= d && d <= x.e);
-  if (!p) return { kind: 'add', d, periods: withPeriodAt(P, d, plen), logs };
+  if (!p) return { kind: 'add', d, periods: withPeriodAt(P, d, plen, today, logs), logs };
   const from = d === p.s ? p.s : d;
   const nl = Object.assign({}, logs);
   let lost = 0;
@@ -500,9 +518,9 @@ function useStore(today) {
     data, model,
     setItem: (d, k, v) => {
       setLog(d, l => { l[k] = v || null; return l; });
-      if (k === 'flow' && v) setData(s => Object.assign({}, s, { periods: withPeriodAt(s.periods, d, buildModel(s, today).plen) }));
+      if (k === 'flow' && v) setData(s => Object.assign({}, s, { periods: withPeriodAt(s.periods, d, buildModel(s, today).plen, today, s.logs) }));
     },
-    planMark: d => planMark(data, d, model.plen),
+    planMark: d => planMark(data, d, model.plen, today),
     applyMark: plan => setData(s => Object.assign({}, s, { periods: plan.periods, logs: plan.logs })),
     setNote: (d, text) => setLog(d, l => { l.note = text; return l; }),
     setSettings: o => setData(s => Object.assign({}, s, { settings: Object.assign({}, s.settings, o) })),
@@ -625,7 +643,7 @@ function WeekStrip({ m, sel, setSel, today, cardPhase, onMark, pop }) {
       <span className="wd">${DOW[parseYmd(d).getDay()]}</span>
       <span key=${popped ? 'p' + pop.n : 'c'} className=${'dot-c' + (popped ? ' pop' : '')} style=${{ background: look ? look.bg : 'transparent', boxShadow: ring || 'none' }}></span>
       <span className="num" style=${{ color: look ? look.fg : '#ffffff' }}>${+d.slice(8)}</span>
-      ${m.logs[d] && html`<span className="mk"></span>`}
+      ${m.logs[d] && html`<span className="mk" style=${m.logs[d].flow || m.logs[d].spot || m.logs[d].mucus ? null : { background: 'transparent', boxShadow: 'inset 0 0 0 1.1px #fff' }}></span>`}
     </button>`);
   }
   return html`<${React.Fragment}>
@@ -704,8 +722,8 @@ function FlowerText({ m, info, date, mode }) {
 function Glows({ phase }) {
   const g = PH[phase].glow;
   return html`<${React.Fragment}>
-    <div className="glow" style=${{ background: glowBg('#ffd2e4'), opacity: g === '#ffd2e4' ? 1 : 0 }}></div>
-    <div className="glow" style=${{ background: glowBg('#ffed9f'), opacity: g === '#ffed9f' ? 1 : 0 }}></div>
+    <div className="glow" style=${{ background: glowBg('#ffd2e4'), opacity: g === '#ffd2e4' ? 'var(--glow-op)' : 0 }}></div>
+    <div className="glow" style=${{ background: glowBg('#ffed9f'), opacity: g === '#ffed9f' ? 'var(--glow-op)' : 0 }}></div>
   </${React.Fragment}>`;
 }
 
@@ -747,7 +765,7 @@ function Home(p) {
       ${VIEWS.map((v, i) => html`<button key=${v} className="tab bl" aria-pressed=${view === v ? 'true' : 'false'} onClick=${() => setView(v)}>${['Main', 'Month', 'Year'][i]}</button>`)}
     </nav>
     <div className="stage">
-      <div className="pcard" style=${{ background: color }}>
+      <div className="pcard" style=${{ background: cardBg(color) }}>
         <${WeekStrip} m=${m} sel=${sel} setSel=${setSel} today=${today} cardPhase=${phase} onMark=${markDay} pop=${pop} />
       </div>
       <${Glows} phase=${phase} />
@@ -824,7 +842,7 @@ function Record({ store, date, toggleTheme, onDone, leaving, showToast }) {
     <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn" aria-hidden="true" tabIndex="-1" style=${{ pointerEvents: 'none' }}><${Icon} name="menu" /></button>`} />
     <div style=${{ height: '8px' }}></div>
     <div className="stage" style=${{ height: 'auto' }}>
-      <div className="pcard" style=${{ background: PH[phase].color }}></div>
+      <div className="pcard" style=${{ background: cardBg(PH[phase].color) }}></div>
       <div className="sheet">
         <${RecordRows} store=${store} date=${date} showToast=${showToast} />
       </div>
@@ -942,6 +960,8 @@ function Year({ store, today, toggleTheme, openSettings, view, setView, year, se
       ${rows.map(r => html`<button key=${r.p.s} className="ycard bl soft" aria-label=${'在月曆看 ' + mdZh(r.p.s) + ' 開始的週期'} onClick=${() => openCycleMonth(r.p.s)}>
         ${r.current
           ? html`<div className="y1"><span className="bigu">目前週期</span><span className="rng">開始於${mdZh(r.p.s)}</span></div>`
+          : r.gapped
+          ? html`<div className="y1"><span className="bigu">${mdZh(r.p.s)}開始</span><span className="rng">之後還沒有紀錄</span></div>`
           : html`<div className="y1"><span><span className="big">${r.cycleLen}</span><span className="bigu">天</span></span><span className="rng">${mdZh(r.p.s)}－${mdZh(r.end)}</span></div>`}
         <div className="y2">
           <span className="p">${r.ongoing ? '經期第 ' + r.perLen + ' 天' : '經期 ' + r.perLen + ' 天'}</span>
@@ -1049,9 +1069,16 @@ function App() {
     lastToday.current = today;
   }, [today]);
 
+  const firstTheme = useRef(true);
   useEffect(() => {
     const root = document.documentElement;
     const t = store.data.theme;
+    if (!firstTheme.current) {
+      root.classList.add('theming');
+      clearTimeout(root._themeTimer);
+      root._themeTimer = setTimeout(() => root.classList.remove('theming'), 650);
+    }
+    firstTheme.current = false;
     if (t === 'dark' || t === 'light') root.setAttribute('data-app', t); else root.removeAttribute('data-app');
     const sync = () => {
       const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
@@ -1059,7 +1086,9 @@ function App() {
     };
     sync();
     const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-    if (mq && mq.addEventListener) { mq.addEventListener('change', sync); return () => mq.removeEventListener('change', sync); }
+    // the phone switching light/dark by itself gets the same smooth change
+    const onSys = () => { root.classList.add('theming'); clearTimeout(root._themeTimer); root._themeTimer = setTimeout(() => root.classList.remove('theming'), 650); sync(); };
+    if (mq && mq.addEventListener) { mq.addEventListener('change', onSys); return () => mq.removeEventListener('change', onSys); }
   }, [store.data.theme]);
 
   const doBackup = async () => {
