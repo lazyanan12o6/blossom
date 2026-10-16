@@ -110,6 +110,7 @@ h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.06em;white-space:nowr
 .f-phase{top:56px;font-size:20px;font-weight:600;transition:color .5s ease}
 .f-day{top:89px;font-size:24px;font-weight:600}
 .f-day b{font-size:30px;font-weight:600;margin:0 .22em}
+.f-day .f-wait{font-size:28px;margin:0}
 .f-sub{top:130px;font-size:11px;font-weight:400;line-height:18px}
 .f-date{top:131px;font-size:12px}
 .f-date b{font-size:16px;font-weight:400;margin-right:.05em}
@@ -434,9 +435,11 @@ function calcDay(m, d) {
   else if (d < o1) { phase = 'fol'; start = afterPe; nextAt = o1; nextPhase = 'ovu'; }
   else if (d <= o2) { phase = 'ovu'; start = pe >= o1 ? afterPe : o1; nextAt = addD(o2, 1); nextPhase = 'lut'; }
   else { phase = 'lut'; start = pe > o2 ? afterPe : addD(o2, 1); nextAt = N; nextPhase = 'men'; }
+  // late, and this future day sits in the predicted days that haven't come: no day count can be known yet
+  const wait = pred && phase === 'men' && m.late > 0 && d > m.today && cs === m.n0;
   return { phase, day: diffD(start, d) + 1, cs, pe, N, ov, pred, nextAt, nextPhase,
     per: phase === 'men' ? (!pred && d <= m.today ? 'act' : 'pred') : null,
-    ovu: phase === 'ovu', late: 0, actual: !pred ? p : null };
+    ovu: phase === 'ovu', late: wait ? m.late : 0, wait, actual: !pred ? p : null };
 }
 // where other bleeding falls in its cycle: the clinic's early / mid / late cycle
 function bleedClass(d, ov) {
@@ -471,7 +474,7 @@ function cycleRows(m, year) {
 const DATA_KEY = 'blossom:data';
 const UI_KEY = 'blossom:ui';
 // semantic version: big rework . new feature . small fix
-const VERSION = { label: '1.2.0', date: '2026.10.16' };
+const VERSION = { label: '1.2.1', date: '2026.10.16' };
 const DEFAULT_SETTINGS = { mode: 'auto', period: 5, cycle: 28 };
 function seedData() { return { v: 1, theme: null, lastBackup: null, periods: [], logs: {}, settings: Object.assign({}, DEFAULT_SETTINGS) }; }
 function cleanLog(l) {
@@ -730,11 +733,13 @@ function FlowerText({ m, info, date, mode }) {
   const sub = info.pred ? '預計經期' : info.phase === 'men' ? '本次經期' : '上次經期';
   return html`<${React.Fragment}>
     <span className="f-txt f-phase" style=${{ color: c }}>${PH[info.phase].name}</span>
-    <span className="f-txt f-day">第<b>${info.day}</b>天</span>
+    ${info.wait
+      ? html`<span className="f-txt f-day"><b className="f-wait">預計中</b></span>`
+      : html`<span className="f-txt f-day">第<b>${info.day}</b>天</span>`}
     ${mode === 'rec'
       ? html`<span className="f-txt f-date f-swap"><b>${+date.slice(5, 7)}</b>月 <b>${+date.slice(8)}</b>日</span>`
       : info.late
-        ? html`<span className="f-txt f-sub">預計 ${md(info.N)} 開始<br />晚了 ${info.late} 天</span>`
+        ? html`<span className="f-txt f-sub">預計 ${md(info.wait ? info.cs : info.N)} 開始<br />晚了 ${info.late} 天</span>`
         : html`<span className="f-txt f-sub">${sub}<br />${md(info.cs)} 開始</span>`}
   </${React.Fragment}>`;
 }
@@ -914,7 +919,8 @@ function Month({ store, today, toggleTheme, openSettings, view, setView, mOff, s
   }
   const selInfo = dayInfo(m, mSel);
   let futureText = '這天還沒到，還不能記錄哦';
-  if (selInfo && selInfo.per === 'pred') futureText = '預計經期第 ' + selInfo.day + ' 天';
+  if (selInfo && selInfo.wait) futureText = '預計經期，還沒開始哦';
+  else if (selInfo && selInfo.per === 'pred') futureText = '預計經期第 ' + selInfo.day + ' 天';
   else if (selInfo && selInfo.ovu) futureText = '預計是排卵期';
   return html`<div className="screen">
     <${Header} toggleTheme=${toggleTheme} right=${html`<button className="iconbtn bl" aria-label="打開設定" onClick=${openSettings}><${Icon} name="menu" /></button>`} />
@@ -1100,12 +1106,13 @@ function App() {
     }
     firstTheme.current = false;
     if (t === 'dark' || t === 'light') root.setAttribute('data-app', t); else root.removeAttribute('data-app');
+    const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     const sync = () => {
-      const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
-      const mt = document.getElementById('theme-color'); if (mt && bg) mt.setAttribute('content', bg);
+      // the colours fade, so reading --bg here would give the old one: use where it's heading
+      const dark = t === 'dark' || (t !== 'light' && mq && mq.matches);
+      const mt = document.getElementById('theme-color'); if (mt) mt.setAttribute('content', dark ? '#323232' : '#eeeeeb');
     };
     sync();
-    const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     // the phone switching light/dark by itself gets the same smooth change
     const onSys = () => { root.classList.add('theming'); clearTimeout(root._themeTimer); root._themeTimer = setTimeout(() => root.classList.remove('theming'), 650); sync(); };
     if (mq && mq.addEventListener) { mq.addEventListener('change', onSys); return () => mq.removeEventListener('change', onSys); }
